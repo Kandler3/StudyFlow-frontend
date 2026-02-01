@@ -1,5 +1,4 @@
-import { createBrowserRouter } from 'react-router';
-import { Welcome } from './pages/Welcome';
+import { createBrowserRouter, redirect } from 'react-router';
 import { Schedule } from './pages/Schedule';
 import { LessonDetail } from './pages/LessonDetail';
 import { Students } from './pages/Students';
@@ -17,7 +16,7 @@ import { Notifications } from './pages/Notifications';
 export const router = createBrowserRouter([
   {
     path: '/',
-    Component: Welcome,
+    loader: () => redirect('/schedule'),
   },
   {
     path: '/schedule',
