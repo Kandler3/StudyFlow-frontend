@@ -267,6 +267,7 @@ function DebugPanel() {
     ['Current URL', window.location.href],
     ['VITE_USE_MOCKS', import.meta.env.VITE_USE_MOCKS ?? 'undefined'],
     ['VITE_API_URL', import.meta.env.VITE_API_URL ?? 'undefined'],
+    ['VITE_NGROK_SKIP_WARNING', import.meta.env.VITE_NGROK_SKIP_WARNING ?? 'undefined'],
     ['window.Telegram', tg ? 'exists' : 'NOT FOUND'],
     ['WebApp', webApp ? 'exists' : 'NOT FOUND'],
     ['WebApp.platform', webApp?.platform ?? '(empty)'],
