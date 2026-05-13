@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Calendar, ClipboardList, CreditCard, Settings,
@@ -208,6 +208,9 @@ export function Welcome() {
               </div>
             </Card>
 
+            {/* Debug panel — shows what the app actually sees */}
+            <DebugPanel />
+
             {/* Dev login toggle */}
             {!showDevLogin ? (
               <button
@@ -246,5 +249,58 @@ export function Welcome() {
         ) : null}
       </div>
     </div>
+  );
+}
+
+/**
+ * In-app debug panel — shows what the browser actually sees.
+ * Critical for debugging Telegram Mini App issues where there's no DevTools.
+ */
+function DebugPanel() {
+  const [expanded, setExpanded] = React.useState(false);
+
+  const tg = (window as any).Telegram;
+  const webApp = tg?.WebApp;
+
+  const rows: [string, string][] = [
+    ['User Agent', navigator.userAgent],
+    ['Current URL', window.location.href],
+    ['VITE_USE_MOCKS', import.meta.env.VITE_USE_MOCKS ?? 'undefined'],
+    ['VITE_API_URL', import.meta.env.VITE_API_URL ?? 'undefined'],
+    ['window.Telegram', tg ? 'exists' : 'NOT FOUND'],
+    ['WebApp', webApp ? 'exists' : 'NOT FOUND'],
+    ['WebApp.platform', webApp?.platform ?? '(empty)'],
+    ['WebApp.version', webApp?.version ?? '(empty)'],
+    ['initData', webApp?.initData || '(empty)'],
+    ['initData length', String((webApp?.initData || '').length)],
+    ['initDataUnsafe', webApp?.initDataUnsafe ? JSON.stringify(webApp.initDataUnsafe).slice(0, 200) : '(empty)'],
+    ['WebApp.colorScheme', webApp?.colorScheme ?? '(empty)'],
+    ['WebApp.viewportHeight', String(webApp?.viewportHeight ?? 0)],
+    ['WebApp.viewportStableHeight', String(webApp?.viewportStableHeight ?? 0)],
+    ['WebApp.isExpanded', String(webApp?.isExpanded ?? false)],
+  ];
+
+  return (
+    <Card className="bg-white/95 backdrop-blur mb-3">
+      <div
+        className="flex items-center justify-between cursor-pointer py-1"
+        onClick={() => setExpanded(!expanded)}
+      >
+        <span className="text-xs font-mono text-gray-500">Debug Info</span>
+        <span className="text-xs text-gray-400">{expanded ? '▲' : '▼'}</span>
+      </div>
+      {expanded && (
+        <div className="mt-2 space-y-1 text-xs font-mono">
+          {rows.map(([label, value]) => (
+            <div key={label} className="flex gap-2">
+              <span className="text-gray-500 shrink-0">{label}:</span>
+              <span className={`break-all ${value === 'NOT FOUND' || value === '(empty)' ? 'text-red-500' : 'text-gray-700'}`}>
+                {value}
+              </span>
+            </div>
+          ))}
+        </div>
+      )}
+    </Card>
   );
 }
