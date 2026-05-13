@@ -281,26 +281,31 @@ function DebugPanel() {
   ];
 
   return (
-    <Card className="bg-white/95 backdrop-blur mb-3">
+    <div className="bg-gray-900 rounded-xl p-3 mb-3 border border-gray-700">
       <div
         className="flex items-center justify-between cursor-pointer py-1"
         onClick={() => setExpanded(!expanded)}
       >
-        <span className="text-xs font-mono text-gray-500">Debug Info</span>
-        <span className="text-xs text-gray-400">{expanded ? '▲' : '▼'}</span>
+        <span className="text-xs font-mono text-green-400 font-bold">Debug Info</span>
+        <span className="text-xs text-green-400">{expanded ? '▲' : '▼'}</span>
       </div>
       {expanded && (
         <div className="mt-2 space-y-1 text-xs font-mono">
           {rows.map(([label, value]) => (
             <div key={label} className="flex gap-2">
-              <span className="text-gray-500 shrink-0">{label}:</span>
-              <span className={`break-all ${value === 'NOT FOUND' || value === '(empty)' ? 'text-red-500' : 'text-gray-700'}`}>
+              <span className="text-gray-400 shrink-0">{label}:</span>
+              <span
+                className="break-all"
+                style={{
+                  color: value === 'NOT FOUND' || value === '(empty)' ? '#f87171' : '#e2e8f0',
+                }}
+              >
                 {value}
               </span>
             </div>
           ))}
         </div>
       )}
-    </Card>
+    </div>
   );
 }
