@@ -4,7 +4,7 @@ import { Calendar, Users, ClipboardList, CreditCard, MoreHorizontal, Settings } 
 import { useApp } from '../../context/AppContext';
 
 export function BottomNav() {
-  const { userRole } = useApp();
+  const { authUser } = useApp();
 
   const tutorNav = [
     { to: '/schedule', icon: Calendar, label: 'Расписание' },
@@ -21,7 +21,7 @@ export function BottomNav() {
     { to: '/settings', icon: Settings, label: 'Настройки' },
   ];
 
-  const navItems = userRole === 'tutor' ? tutorNav : studentNav;
+  const navItems = authUser?.role === 'tutor' ? tutorNav : studentNav;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-40 bg-[var(--tg-theme-bg-color,#fff)] border-t border-[var(--tg-theme-secondary-bg-color,#f4f4f5)] safe-area-bottom">

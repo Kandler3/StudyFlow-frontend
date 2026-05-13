@@ -1,97 +1,97 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Calendar, ClipboardList, CreditCard, Settings, ArrowRight } from 'lucide-react';
+import { Calendar, ClipboardList, CreditCard, Settings, ArrowRight, BookOpen, LogIn } from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
+import { Input } from '../components/ui/input';
 import { useApp } from '../context/AppContext';
+
+const useMock = import.meta.env.VITE_USE_MOCKS === 'true';
 
 export function Welcome() {
   const navigate = useNavigate();
-  const { userRole, setUserRole } = useApp();
-  const [selectedRole, setSelectedRole] = useState<'tutor' | 'student'>(userRole === 'parent' ? 'student' : userRole);
+  const { loginAs, loginWithTelegramId, authUser } = useApp();
+  const [telegramId, setTelegramId] = useState('');
+  const [isLoggingIn, setIsLoggingIn] = useState(false);
 
   const features = [
     {
       icon: Calendar,
       title: 'Расписание',
-      description: 'Управляйте занятиями и временем',
-      link: '/schedule',
+      description: 'Планируйте и управляйте занятиями',
     },
     {
       icon: ClipboardList,
       title: 'Задания',
-      description: 'Создавайте и отслеживайте ДЗ',
-      link: '/assignments',
+      description: 'Создавайте и отслеживайте домашние задания',
     },
     {
       icon: CreditCard,
       title: 'Оплаты',
-      description: 'Контролируйте финансы',
-      link: '/payments',
+      description: 'Работа с чеками и подтверждение оплат',
     },
     {
       icon: Settings,
       title: 'Настройки',
-      description: 'Персонализируйте приложение',
-      link: '/settings',
+      description: 'Персонализируйте приложение под себя',
     },
   ];
 
-  const handleStart = () => {
-    setUserRole(selectedRole);
+  // ── Mock-mode: quick start as tutor ──
+  const handleStart = async () => {
+    await loginAs('tutor');
+    localStorage.setItem('onboarding_complete', 'true');
     navigate('/schedule');
   };
+
+  // ── Real-mode: login with telegram ID ──
+  const handleTelegramLogin = async () => {
+    const trimmed = telegramId.trim();
+    if (!trimmed) return;
+    setIsLoggingIn(true);
+    try {
+      await loginWithTelegramId(trimmed);
+      navigate('/schedule');
+    } catch {
+      // Error toast is already shown by AppContext
+    } finally {
+      setIsLoggingIn(false);
+    }
+  };
+
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleTelegramLogin();
+    }
+  };
+
+  // ── Redirect: real mode — already logged in; mock mode — completed onboarding ──
+  React.useEffect(() => {
+    if (!useMock && authUser) {
+      navigate('/schedule', { replace: true });
+    } else if (useMock && localStorage.getItem('onboarding_complete') === 'true') {
+      navigate('/schedule', { replace: true });
+    }
+  }, [navigate, authUser]);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-[#3390ec] to-[#5b9bef] flex flex-col items-center justify-center p-6">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
           <div className="w-20 h-20 bg-white rounded-3xl flex items-center justify-center mx-auto mb-4 shadow-lg">
-            <Calendar className="w-10 h-10 text-[#3390ec]" />
+            <BookOpen className="w-10 h-10 text-[#3390ec]" />
           </div>
           <h1 className="text-3xl font-bold text-white mb-2">StudyFlow</h1>
           <p className="text-white/90 text-lg">
-            Управление обучением в одном приложении
+            Платформа для репетиторов и учеников
           </p>
         </div>
-
-        <Card className="mb-6 bg-white">
-          <h2 className="text-lg font-semibold mb-4">Выберите роль</h2>
-          <div className="grid grid-cols-2 gap-3">
-            <button
-              onClick={() => setSelectedRole('tutor')}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                selectedRole === 'tutor'
-                  ? 'border-[#3390ec] bg-[#3390ec]/10'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="font-semibold">Репетитор</div>
-              <div className="text-sm text-gray-600 mt-1">Управление учениками</div>
-            </button>
-            <button
-              onClick={() => setSelectedRole('student')}
-              className={`p-4 rounded-xl border-2 transition-all ${
-                selectedRole === 'student'
-                  ? 'border-[#3390ec] bg-[#3390ec]/10'
-                  : 'border-gray-200 hover:border-gray-300'
-              }`}
-            >
-              <div className="font-semibold">Ученик</div>
-              <div className="text-sm text-gray-600 mt-1">Просмотр занятий</div>
-            </button>
-          </div>
-        </Card>
 
         <div className="space-y-3 mb-6">
           {features.map((feature) => (
             <Card
               key={feature.title}
               className="bg-white/95 backdrop-blur"
-              onClick={() => {
-                setUserRole(selectedRole);
-                navigate(feature.link);
-              }}
             >
               <div className="flex items-center gap-4">
                 <div className="w-12 h-12 bg-[#3390ec]/10 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -107,13 +107,48 @@ export function Welcome() {
           ))}
         </div>
 
-        <Button fullWidth size="lg" onClick={handleStart}>
-          Начать работу
-        </Button>
-
-        <p className="text-center text-white/70 text-sm mt-6">
-          Все данные синхронизируются в реальном времени
-        </p>
+        {useMock ? (
+          // ── MOCK MODE: Quick start button ──
+          <>
+            <Button fullWidth size="lg" onClick={handleStart}>
+              Начать
+            </Button>
+            <p className="text-center text-white/70 text-sm mt-6">
+              Демо-режим: вход как репетитор
+            </p>
+          </>
+        ) : (
+          // ── REAL MODE: Telegram ID login ──
+          <>
+            <Card className="bg-white/95 backdrop-blur mb-3">
+              <div className="space-y-3">
+                <label className="block text-sm font-medium text-gray-700">
+                  Telegram ID
+                </label>
+                <Input
+                  type="text"
+                  inputMode="numeric"
+                  placeholder="Введите ваш Telegram ID"
+                  value={telegramId}
+                  onChange={(e) => setTelegramId(e.target.value)}
+                  onKeyDown={handleKeyDown}
+                />
+                <Button
+                  fullWidth
+                  size="lg"
+                  onClick={handleTelegramLogin}
+                  disabled={isLoggingIn || !telegramId.trim()}
+                >
+                  <LogIn className="w-5 h-5 mr-2" />
+                  {isLoggingIn ? 'Вход...' : 'Войти'}
+                </Button>
+              </div>
+            </Card>
+            <p className="text-center text-white/70 text-sm mt-6">
+              Войдите с помощью Telegram ID для начала работы
+            </p>
+          </>
+        )}
       </div>
     </div>
   );

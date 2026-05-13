@@ -1,90 +1,120 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router';
-import { Users, Plus, Search, TrendingUp, Calendar, CreditCard } from 'lucide-react';
+import { Users, UserPlus, GraduationCap, Plus } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Header } from '../components/layout/Header';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Input } from '../components/ui/input';
 import { EmptyState } from '../components/ui/EmptyState';
-import { students } from '../data/mockData';
-import { Student } from '../types';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { useApp } from '../context/AppContext';
+import { apiClient } from '../api/client';
+import type { User, TutorStudent } from '../types';
+
+interface RelationshipWithUser {
+  relationship: TutorStudent;
+  user: User;
+}
 
 export function Students() {
   const navigate = useNavigate();
-  const [searchQuery, setSearchQuery] = useState('');
-  const [statusFilter, setStatusFilter] = useState<'all' | Student['status']>('all');
+  const { authUser } = useApp();
 
-  const filteredStudents = students.filter((student) => {
-    const matchesSearch = student.name.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesStatus = statusFilter === 'all' || student.status === statusFilter;
-    return matchesSearch && matchesStatus;
+  const [items, setItems] = useState<RelationshipWithUser[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState<'all' | 'invited' | 'active'>('all');
+
+  const fetchData = useCallback(async () => {
+    if (!authUser) return;
+
+    setLoading(true);
+    try {
+      if (authUser.role === 'tutor') {
+        const relationships = await apiClient.getTutorStudents(authUser.id);
+        const withUsers = await Promise.all(
+          relationships.map(async (rel) => {
+            const user = await apiClient.getUser(rel.student_id);
+            return { relationship: rel, user };
+          })
+        );
+        setItems(withUsers);
+      } else {
+        const relationships = await apiClient.getStudentTutors(authUser.id);
+        const withUsers = await Promise.all(
+          relationships.map(async (rel) => {
+            const user = await apiClient.getUser(rel.tutor_id);
+            return { relationship: rel, user };
+          })
+        );
+        setItems(withUsers);
+      }
+    } catch (err) {
+      console.error('Failed to fetch students data', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [authUser]);
+
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
+
+  const filteredItems = items.filter(({ relationship }) => {
+    if (statusFilter === 'all') return true;
+    return relationship.status === statusFilter;
   });
 
-  const getStatusBadge = (status: Student['status']) => {
-    const statusConfig = {
-      active: { variant: 'success' as const, label: 'Активен' },
-      trial: { variant: 'info' as const, label: 'Пробное' },
-      completed: { variant: 'default' as const, label: 'Закончил' },
-    };
-    
-    const config = statusConfig[status];
-    return <Badge variant={config.variant} size="sm">{config.label}</Badge>;
-  };
-
-  const formatNextLesson = (dateStr?: string) => {
-    if (!dateStr) return null;
-    const date = new Date(dateStr);
-    const today = new Date();
-    const tomorrow = new Date(today);
-    tomorrow.setDate(tomorrow.getDate() + 1);
-
-    if (date.toDateString() === today.toDateString()) {
-      return `Сегодня в ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
-    } else if (date.toDateString() === tomorrow.toDateString()) {
-      return `Завтра в ${date.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' })}`;
+  const getStatusBadge = (status: 'invited' | 'active') => {
+    if (status === 'active') {
+      return <Badge variant="success" size="sm">Активен</Badge>;
     }
-    
-    return date.toLocaleDateString('ru-RU', { 
-      day: 'numeric', 
-      month: 'short',
-      hour: '2-digit',
-      minute: '2-digit'
-    });
+    return <Badge variant="warning" size="sm">Приглашён</Badge>;
   };
+
+  const handleCardClick = (item: RelationshipWithUser) => {
+    const targetId = authUser?.role === 'tutor'
+      ? item.relationship.student_id
+      : item.relationship.tutor_id;
+    navigate(`/students/${targetId}`);
+  };
+
+  if (!authUser) {
+    return (
+      <Layout>
+        <Header title="Ученики" />
+        <LoadingSpinner />
+      </Layout>
+    );
+  }
+
+  const isTutor = authUser.role === 'tutor';
+  const title = isTutor ? 'Ученики' : 'Преподаватели';
 
   return (
     <Layout>
       <Header
-        title="Ученики"
+        title={title}
         action={
-          <Button size="sm" onClick={() => navigate('/students/create')}>
-            <Plus className="w-4 h-4" />
-          </Button>
+          isTutor && (
+            <Button size="sm" onClick={() => navigate('/students/invite')}>
+              <Plus className="w-4 h-4" />
+            </Button>
+          )
         }
       />
 
       <div className="p-4 space-y-4">
-        {/* Search */}
-        <Input
-          placeholder="Поиск учеников..."
-          value={searchQuery}
-          onChange={(e) => setSearchQuery(e.target.value)}
-          icon={<Search className="w-5 h-5" />}
-        />
-
         {/* Status Filters */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
           {[
             { value: 'all', label: 'Все' },
             { value: 'active', label: 'Активные' },
-            { value: 'trial', label: 'Пробные' },
-            { value: 'completed', label: 'Закончили' },
+            { value: 'invited', label: 'Приглашённые' },
           ].map((item) => (
             <button
               key={item.value}
-              onClick={() => setStatusFilter(item.value as any)}
+              onClick={() => setStatusFilter(item.value as typeof statusFilter)}
               className={`px-4 py-2 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
                 statusFilter === item.value
                   ? 'bg-[var(--tg-theme-button-color,#3390ec)] text-white'
@@ -96,68 +126,62 @@ export function Students() {
           ))}
         </div>
 
-        {/* Students List */}
-        {filteredStudents.length === 0 ? (
+        {/* List */}
+        {loading ? (
+          <LoadingSpinner />
+        ) : filteredItems.length === 0 ? (
           <EmptyState
             icon={<Users className="w-16 h-16" />}
-            title={searchQuery ? 'Ничего не найдено' : 'Нет учеников'}
-            description={searchQuery ? 'Попробуйте изменить запрос' : 'Добавьте первого ученика'}
+            title={isTutor ? 'Нет учеников' : 'Нет преподавателей'}
+            description={
+              isTutor
+                ? 'Пригласите первого ученика'
+                : 'У вас пока нет преподавателей'
+            }
             action={
-              !searchQuery && (
-                <Button onClick={() => navigate('/students/create')}>
-                  <Plus className="w-4 h-4" />
-                  Добавить ученика
+              isTutor && statusFilter === 'all' && (
+                <Button onClick={() => navigate('/students/invite')}>
+                  <UserPlus className="w-4 h-4" />
+                  Пригласить ученика
                 </Button>
               )
             }
           />
         ) : (
           <div className="space-y-3">
-            {filteredStudents.map((student) => (
+            {filteredItems.map((item) => (
               <Card
-                key={student.id}
-                onClick={() => navigate(`/students/${student.id}`)}
+                key={`${item.relationship.tutor_id}_${item.relationship.student_id}`}
+                onClick={() => handleCardClick(item)}
               >
                 <div className="flex items-start gap-4">
-                  <img
-                    src={student.avatar}
-                    alt={student.name}
-                    className="w-12 h-12 rounded-full flex-shrink-0"
-                  />
+                  <div className="w-12 h-12 rounded-full flex items-center justify-center bg-[var(--tg-theme-secondary-bg-color,#f4f4f5)] flex-shrink-0">
+                    {isTutor ? (
+                      <GraduationCap className="w-6 h-6 text-[var(--tg-theme-button-color,#3390ec)]" />
+                    ) : (
+                      <Users className="w-6 h-6 text-[var(--tg-theme-button-color,#3390ec)]" />
+                    )}
+                  </div>
                   <div className="flex-1 min-w-0">
-                    <div className="flex items-start justify-between mb-2">
+                    <div className="flex items-start justify-between mb-1">
                       <h3 className="font-semibold text-[var(--tg-theme-text-color,#000)]">
-                        {student.name}
+                        {item.user.first_name} {item.user.last_name}
                       </h3>
-                      {getStatusBadge(student.status)}
+                      {getStatusBadge(item.relationship.status)}
                     </div>
 
-                    {student.nextLesson && (
-                      <div className="flex items-center gap-2 text-sm text-[var(--tg-theme-hint-color,#999)] mb-2">
-                        <Calendar className="w-4 h-4" />
-                        {formatNextLesson(student.nextLesson)}
+                    {isTutor && (
+                      <div className="flex flex-wrap gap-3 text-sm text-[var(--tg-theme-hint-color,#999)]">
+                        {item.relationship.lesson_price_rub !== undefined && (
+                          <span>{item.relationship.lesson_price_rub} ₽ / занятие</span>
+                        )}
+                        {item.relationship.lesson_connection_link && (
+                          <span className="truncate max-w-[200px]">
+                            {item.relationship.lesson_connection_link}
+                          </span>
+                        )}
                       </div>
                     )}
-
-                    <div className="flex items-center gap-4 text-sm">
-                      {student.progress !== undefined && (
-                        <div className="flex items-center gap-2">
-                          <TrendingUp className="w-4 h-4 text-[#34c759]" />
-                          <span className="text-[var(--tg-theme-text-color,#000)]">
-                            {student.progress}%
-                          </span>
-                        </div>
-                      )}
-                      
-                      {student.balance !== undefined && (
-                        <div className="flex items-center gap-2">
-                          <CreditCard className="w-4 h-4 text-[var(--tg-theme-hint-color,#999)]" />
-                          <span className={student.balance < 0 ? 'text-[#ff3b30]' : 'text-[#34c759]'}>
-                            {student.balance > 0 ? '+' : ''}{student.balance} ₽
-                          </span>
-                        </div>
-                      )}
-                    </div>
                   </div>
                 </div>
               </Card>
