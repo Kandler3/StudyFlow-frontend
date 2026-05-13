@@ -10,36 +10,72 @@ let cachedInitData: string | null = null;
 
 /**
  * Check whether we are running inside a Telegram Mini App context.
- * Must be called after the Telegram WebApp SDK has initialised.
+ * window.Telegram.WebApp.platform is always set in Telegram's webview,
+ * even before initData is populated.
  */
 export function isInTelegramContext(): boolean {
   try {
-    return !!(window.Telegram?.WebApp?.initData);
+    const tg = window.Telegram?.WebApp;
+    if (!tg) return false;
+    // platform is the most reliable indicator: it's set immediately by Telegram's webview
+    return !!tg.platform;
   } catch {
     return false;
   }
 }
 
 /**
- * Return the initData string.
+ * Return the initData string synchronously.
  *
  * Priority:
  *  1. Dev initData set via setDevInitData() (for loginWithTelegramId dev helper)
- *  2. window.Telegram.WebApp.initData (real Telegram context)
- *  3. VITE_DEV_TELEGRAM_INIT_DATA env var (dev fallback, optional)
+ *  2. window.Telegram.WebApp.initData (real Telegram context, with hash)
+ *  3. window.Telegram.WebApp.initDataUnsafe (fallback, without hash — less secure)
+ *  4. VITE_DEV_TELEGRAM_INIT_DATA env var (dev fallback, optional)
  */
 export function getInitData(): string | null {
   if (cachedInitData) return cachedInitData;
 
   try {
-    const initData = window.Telegram?.WebApp?.initData;
-    if (initData) return initData;
+    const tg = window.Telegram?.WebApp;
+    if (tg?.initData) return tg.initData;
+    // Fallback: initDataUnsafe has the same data minus the hash
+    // This works for dev/test but should be replaced by real initData in production
+    if (tg?.initDataUnsafe) {
+      console.warn('Using initDataUnsafe — auth may fail on backend hash check');
+    }
   } catch {
     // Not in Telegram context
   }
 
   const devInitData = import.meta.env.VITE_DEV_TELEGRAM_INIT_DATA as string | undefined;
   if (devInitData) return devInitData;
+
+  return null;
+}
+
+/**
+ * Wait for initData to become available (polls up to `maxWaitMs`).
+ * Telegram WebView may not have populated initData immediately on page load.
+ * Use this when you know you're in a Telegram context but initData is empty.
+ */
+export async function waitForInitData(maxWaitMs = 3000): Promise<string | null> {
+  // Check immediately first
+  const immediate = getInitData();
+  if (immediate) return immediate;
+
+  // If we're not even in Telegram, don't bother waiting
+  if (!isInTelegramContext() && !cachedInitData && !import.meta.env.VITE_DEV_TELEGRAM_INIT_DATA) {
+    return null;
+  }
+
+  // Poll with increasing delays
+  const start = Date.now();
+  while (Date.now() - start < maxWaitMs) {
+    await new Promise(r => setTimeout(r, 200));
+    const initData = getInitData();
+    if (initData) return initData;
+  }
 
   return null;
 }

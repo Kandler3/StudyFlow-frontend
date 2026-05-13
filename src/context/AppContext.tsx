@@ -4,6 +4,7 @@ import { apiClient } from '../api/client';
 import {
   isInTelegramContext,
   getInitData,
+  waitForInitData,
   clearAuth,
   setDevInitData,
   parseTelegramId,
@@ -70,40 +71,41 @@ export function AppProvider({ children }: { children: ReactNode }) {
         setIsInitializing(false);
       });
     } else {
-      // Real mode: check for initData (Telegram context or dev fallback)
-      const initData = getInitData();
-      if (initData) {
-        // We have initData — try to authenticate
-        apiClient.getMe()
-          .then((user) => {
-            handleAuthSuccess(user);
-          })
-          .catch((error: unknown) => {
-            const status = (error as { response?: { status?: number } }).response?.status;
-            if (status === 404) {
-              // User not registered — store Telegram user info for registration
-              const userInfo = parseTelegramUserNames(initData);
-              const telegramId = parseTelegramId(initData);
-              if (telegramId) {
-                setTelegramUserInfo({
-                  id: telegramId,
-                  ...userInfo,
-                });
-                setNeedsRegistration(true);
+      // Real mode: wait for initData (Telegram may not have populated it yet)
+      waitForInitData(3000).then((initData) => {
+        if (initData) {
+          // We have initData — try to authenticate
+          apiClient.getMe()
+            .then((user) => {
+              handleAuthSuccess(user);
+            })
+            .catch((error: unknown) => {
+              const status = (error as { response?: { status?: number } }).response?.status;
+              if (status === 404) {
+                // User not registered — store Telegram user info for registration
+                const userInfo = parseTelegramUserNames(initData);
+                const telegramId = parseTelegramId(initData);
+                if (telegramId) {
+                  setTelegramUserInfo({
+                    id: telegramId,
+                    ...userInfo,
+                  });
+                  setNeedsRegistration(true);
+                }
+                // If we can't even parse an id, fall through to needsTelegram
               }
-              // If we can't even parse an id, fall through to needsTelegram
-            }
-            // 401 is handled by httpClient interceptor (redirects to /welcome)
-            // Other errors: stay on welcome page, no special action needed
-          })
-          .finally(() => {
-            setIsInitializing(false);
-          });
-      } else {
-        // Not in Telegram — show "Open in Telegram" message
-        setIsInitializing(false);
-        setNeedsTelegram(true);
-      }
+              // 401 is handled by httpClient interceptor (redirects to /welcome)
+              // Other errors: stay on welcome page, no special action needed
+            })
+            .finally(() => {
+              setIsInitializing(false);
+            });
+        } else {
+          // Not in Telegram — show "Open in Telegram" message
+          setIsInitializing(false);
+          setNeedsTelegram(true);
+        }
+      });
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
