@@ -1,6 +1,8 @@
 /// <reference types="vite/client" />
 
 interface TelegramWebApp {
+  platform: string;
+  version: string;
   initData: string;
   initDataUnsafe: Record<string, unknown>;
   ready: () => void;
