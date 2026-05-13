@@ -1,252 +1,270 @@
-import { User, Student, Lesson, Assignment, Payment, Notification, AnalyticsData } from '../types';
+import type {
+  User,
+  TutorProfile,
+  TutorStudent,
+  Slot,
+  Lesson,
+  Assignment,
+  Submission,
+  Feedback,
+  Receipt,
+  PaymentInfo,
+  FileInfo,
+  Notification,
+  StudentView,
+  AssignmentStatus,
+} from '../types';
 
-export const currentUser: User = {
-  id: '1',
-  name: 'Анна Петрова',
-  role: 'tutor',
-  avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Anna',
-};
+// ── Users ────────────────────────────────────────────────────────────────────
 
-export const students: Student[] = [
+export const users: User[] = [
   {
-    id: 's1',
-    name: 'Иван Смирнов',
+    id: 'u1',
+    role: 'tutor',
+    first_name: 'Анна',
+    last_name: 'Петрова',
+    timezone: 'Europe/Moscow',
     status: 'active',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Ivan',
-    nextLesson: '2026-02-03T10:00:00',
-    balance: -500,
-    progress: 85,
   },
   {
-    id: 's2',
-    name: 'Мария Козлова',
+    id: 'u2',
+    role: 'student',
+    first_name: 'Иван',
+    last_name: 'Смирнов',
+    timezone: 'Europe/Moscow',
     status: 'active',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Maria',
-    nextLesson: '2026-02-02T14:00:00',
-    balance: 0,
-    progress: 92,
-  },
-  {
-    id: 's3',
-    name: 'Петр Васильев',
-    status: 'trial',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Petr',
-    nextLesson: '2026-02-04T16:00:00',
-    progress: 60,
-  },
-  {
-    id: 's4',
-    name: 'Елена Новикова',
-    status: 'active',
-    avatar: 'https://api.dicebear.com/7.x/avataaars/svg?seed=Elena',
-    nextLesson: '2026-02-05T11:00:00',
-    balance: 1000,
-    progress: 78,
   },
 ];
+
+export const currentUser: User = users[0];
+
+// ── TutorProfile ─────────────────────────────────────────────────────────────
+
+export const tutorProfile: TutorProfile = {
+  user_id: 'u1',
+  payment_info: 'Сбербанк: 4276 1234 5678 9012',
+  lesson_price_rub: 1500,
+  lesson_connection_link: 'https://zoom.us/j/1234567890',
+};
+
+// ── TutorStudent relationships ───────────────────────────────────────────────
+
+export const tutorStudents: TutorStudent[] = [
+  {
+    tutor_id: 'u1',
+    student_id: 'u2',
+    status: 'active',
+    lesson_price_rub: 1500,
+    lesson_connection_link: 'https://zoom.us/j/1234567890',
+  },
+];
+
+// ── Slots ────────────────────────────────────────────────────────────────────
+
+export const slots: Slot[] = [
+  {
+    id: 'slot1',
+    tutor_id: 'u1',
+    starts_at: '2026-02-03T10:00:00+03:00',
+    ends_at: '2026-02-03T11:00:00+03:00',
+    is_booked: true,
+  },
+  {
+    id: 'slot2',
+    tutor_id: 'u1',
+    starts_at: '2026-02-03T14:00:00+03:00',
+    ends_at: '2026-02-03T15:30:00+03:00',
+    is_booked: false,
+  },
+  {
+    id: 'slot3',
+    tutor_id: 'u1',
+    starts_at: '2026-02-05T10:00:00+03:00',
+    ends_at: '2026-02-05T11:00:00+03:00',
+    is_booked: true,
+  },
+  {
+    id: 'slot4',
+    tutor_id: 'u1',
+    starts_at: '2026-02-01T15:00:00+03:00',
+    ends_at: '2026-02-01T16:00:00+03:00',
+    is_booked: true,
+  },
+  {
+    id: 'slot5',
+    tutor_id: 'u1',
+    starts_at: '2026-02-06T16:00:00+03:00',
+    ends_at: '2026-02-06T17:00:00+03:00',
+    is_booked: false,
+  },
+];
+
+// ── Lessons ──────────────────────────────────────────────────────────────────
 
 export const lessons: Lesson[] = [
   {
     id: 'l1',
-    title: 'Математика - Тригонометрия',
-    date: '2026-02-02',
-    time: '14:00',
-    duration: 60,
-    type: 'individual',
-    status: 'scheduled',
-    studentIds: ['s2'],
-    studentNames: ['Мария Козлова'],
-    location: 'Online (Zoom)',
-    hasHomework: true,
-    isPaid: true,
+    slot_id: 'slot1',
+    student_id: 'u2',
+    status: 'booked',
+    is_paid: false,
+    connection_link: 'https://zoom.us/j/1234567890',
+    price_rub: 1500,
+    payment_info: 'Сбербанк: 4276 1234 5678 9012',
   },
   {
     id: 'l2',
-    title: 'Физика - Механика',
-    date: '2026-02-03',
-    time: '10:00',
-    duration: 90,
-    type: 'individual',
-    status: 'scheduled',
-    studentIds: ['s1'],
-    studentNames: ['Иван Смирнов'],
-    location: 'Online (Zoom)',
-    hasHomework: false,
-    isPaid: false,
+    slot_id: 'slot4',
+    student_id: 'u2',
+    status: 'completed',
+    is_paid: true,
+    connection_link: 'https://zoom.us/j/1234567890',
+    price_rub: 1500,
   },
   {
     id: 'l3',
-    title: 'Групповое занятие - Алгебра',
-    date: '2026-02-04',
-    time: '16:00',
-    duration: 60,
-    type: 'group',
-    status: 'scheduled',
-    studentIds: ['s3', 's4'],
-    studentNames: ['Петр Васильев', 'Елена Новикова'],
-    location: 'Online (Zoom)',
-    hasHomework: true,
-    isPaid: true,
-  },
-  {
-    id: 'l4',
-    title: 'Математика - Производные',
-    date: '2026-02-01',
-    time: '15:00',
-    duration: 60,
-    type: 'individual',
-    status: 'completed',
-    studentIds: ['s2'],
-    studentNames: ['Мария Козлова'],
-    isPaid: true,
-  },
-  {
-    id: 'l5',
-    title: 'Физика - Электричество',
-    date: '2026-02-05',
-    time: '11:00',
-    duration: 60,
-    type: 'individual',
-    status: 'scheduled',
-    studentIds: ['s4'],
-    studentNames: ['Елена Новикова'],
-    hasHomework: false,
-    isPaid: true,
+    slot_id: 'slot3',
+    student_id: 'u2',
+    status: 'cancelled',
+    is_paid: false,
+    price_rub: 1500,
   },
 ];
+
+// ── Assignments ──────────────────────────────────────────────────────────────
 
 export const assignments: Assignment[] = [
   {
     id: 'a1',
+    tutor_id: 'u1',
+    student_id: 'u2',
     title: 'Задачи на тригонометрические уравнения',
-    description: 'Решить задачи 1-10 из учебника. Показать все этапы решения.',
-    deadline: '2026-02-05T23:59:00',
-    status: 'new',
-    studentId: 's2',
-    studentName: 'Мария Козлова',
-    attachments: ['tasks.pdf'],
+    description: 'Решить задачи 1-10 из учебника',
+    due_date: '2026-02-10T23:59:00+03:00',
   },
   {
     id: 'a2',
-    title: 'Законы Ньютона - практика',
-    description: 'Выполнить задания из прикрепленного файла. Сдать решения в письменном виде.',
-    deadline: '2026-02-04T23:59:00',
-    status: 'submitted',
-    studentId: 's1',
-    studentName: 'Иван Смирнов',
-    attachments: ['newton-tasks.pdf'],
-    submission: {
-      text: 'Выполнил все задания, решения в файле',
-      files: ['solutions.pdf'],
-      submittedAt: '2026-02-03T20:15:00',
-    },
+    tutor_id: 'u1',
+    student_id: 'u2',
+    title: 'Законы Ньютона',
+    description: 'Решить 5 задач на законы Ньютона',
+    due_date: '2026-01-30T23:59:00+03:00',
   },
   {
     id: 'a3',
-    title: 'Квадратные уравнения',
-    description: 'Решить 15 уравнений разными способами',
-    deadline: '2026-02-06T23:59:00',
-    status: 'in_progress',
-    studentId: 's3',
-    studentName: 'Петр Васильев',
-  },
-  {
-    id: 'a4',
-    title: 'Производные сложных функций',
-    description: 'Найти производные для указанных функций',
-    deadline: '2026-01-30T23:59:00',
-    status: 'reviewed',
-    studentId: 's2',
-    studentName: 'Мария Козлова',
-    submission: {
-      text: 'Все задания выполнены',
-      files: ['derivatives.pdf'],
-      submittedAt: '2026-01-29T18:30:00',
-    },
-    feedback: {
-      grade: 5,
-      comment: 'Отличная работа! Все решения верные и хорошо оформлены.',
-    },
+    tutor_id: 'u1',
+    student_id: 'u2',
+    title: 'Производные',
+    description: 'Найти производные функций',
+    due_date: '2026-02-15T23:59:00+03:00',
   },
 ];
 
-export const payments: Payment[] = [
+// ── Submissions ──────────────────────────────────────────────────────────────
+
+export const submissions: Submission[] = [
   {
-    id: 'p1',
-    amount: 3000,
-    dueDate: '2026-02-10',
-    status: 'pending',
-    studentId: 's1',
-    studentName: 'Иван Смирнов',
-    description: 'Оплата за 4 занятия (февраль)',
-  },
-  {
-    id: 'p2',
-    amount: 5000,
-    dueDate: '2026-01-28',
-    status: 'overdue',
-    studentId: 's1',
-    studentName: 'Иван Смирнов',
-    description: 'Оплата за январь',
-  },
-  {
-    id: 'p3',
-    amount: 4000,
-    dueDate: '2026-02-05',
-    status: 'paid',
-    studentId: 's2',
-    studentName: 'Мария Козлова',
-    description: 'Оплата за февраль',
-    paidAt: '2026-02-01T12:00:00',
-  },
-  {
-    id: 'p4',
-    amount: 2500,
-    dueDate: '2026-02-15',
-    status: 'pending',
-    studentId: 's4',
-    studentName: 'Елена Новикова',
-    description: 'Оплата за 3 групповых занятия',
+    id: 'sub1',
+    assignment_id: 'a3',
+    comment: 'Все задания выполнены',
+    created_at: '2026-02-05T18:30:00+03:00',
   },
 ];
+
+// ── Feedbacks ────────────────────────────────────────────────────────────────
+
+export const feedbacks: Feedback[] = [
+  {
+    id: 'fb1',
+    submission_id: 'sub1',
+    comment: 'Отличная работа! Всё верно.',
+  },
+];
+
+// ── Receipts ─────────────────────────────────────────────────────────────────
+
+export const receipts: Receipt[] = [
+  {
+    id: 'r1',
+    lesson_id: 'l2',
+    tutor_id: 'u1',
+    student_id: 'u2',
+    file_id: 'file1',
+    price_rub: 1500,
+    is_verified: true,
+    created_at: '2026-02-01T20:00:00+03:00',
+  },
+];
+
+// ── PaymentInfo ──────────────────────────────────────────────────────────────
+
+export const paymentInfoItems: PaymentInfo[] = [
+  {
+    lesson_id: 'l1',
+    price_rub: 1500,
+    payment_info: 'Сбербанк: 4276 1234 5678 9012',
+  },
+];
+
+// ── FileInfo ─────────────────────────────────────────────────────────────────
+
+export const fileInfos: FileInfo[] = [
+  {
+    id: 'file1',
+    filename: 'receipt_check.jpg',
+    extension: 'jpg',
+    uploaded_by: 'u2',
+    created_at: '2026-02-01T20:00:00+03:00',
+  },
+];
+
+// ── Notifications ────────────────────────────────────────────────────────────
 
 export const notifications: Notification[] = [
   {
     id: 'n1',
-    type: 'lesson',
-    title: 'Занятие завтра',
-    message: 'Математика с Марией Козловой в 14:00',
-    timestamp: '2026-02-01T18:00:00',
+    type: 'lesson_reminder',
+    title: 'Напоминание о занятии',
+    message: 'Завтра в 10:00 занятие с Иваном Смирновым',
+    timestamp: '2026-02-02T18:00:00+03:00',
     read: false,
-    targetId: 'l1',
   },
   {
     id: 'n2',
-    type: 'assignment',
-    title: 'Новое задание сдано',
-    message: 'Иван Смирнов сдал задание по физике',
-    timestamp: '2026-02-01T20:15:00',
+    type: 'assignment_reminder',
+    title: 'Дедлайн задания',
+    message: 'Дедлайн задания «Задачи на тригонометрические уравнения» 10 февраля',
+    timestamp: '2026-02-08T12:00:00+03:00',
     read: false,
-    targetId: 'a2',
-  },
-  {
-    id: 'n3',
-    type: 'payment',
-    title: 'Просроченный платеж',
-    message: 'Иван Смирнов: оплата за январь просрочена',
-    timestamp: '2026-01-29T09:00:00',
-    read: true,
-    targetId: 'p2',
   },
 ];
 
-export const analytics: AnalyticsData = {
-  revenue: 45000,
-  lessonsCount: 28,
-  activeStudents: 12,
-  newStudents: 3,
-  attendance: 94,
+// ── Computed assignment statuses (for convenience) ───────────────────────────
+// a1: no submission, future due  → UNSENT
+// a2: no submission, past due   → OVERDUE
+// a3: has submission + feedback → REVIEWED
+
+export const assignmentStatuses: Record<string, AssignmentStatus> = {
+  a1: 'UNSENT',
+  a2: 'OVERDUE',
+  a3: 'REVIEWED',
 };
+
+// ── StudentViews (composite for UI) ─────────────────────────────────────────
+
+export const studentViews: StudentView[] = [
+  {
+    user: users[1], // Ivan Smirnov
+    relationship: tutorStudents[0],
+    stats: {
+      totalLessons: 3,   // l1, l2, l3
+      completedLessons: 1, // l2 (completed)
+      activeAssignments: 2, // a1 (UNSENT), a3 (REVIEWED — still "active" from a certain perspective, or just a2 OVERDUE)
+    },
+  },
+];
+
+// ── FAQ data (kept as-is, no type change needed) ─────────────────────────────
 
 export const faqData = [
   {

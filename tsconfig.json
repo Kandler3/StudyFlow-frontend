@@ -1,0 +1,32 @@
+{
+  "compilerOptions": {
+    "target": "ES2020",
+    "module": "ESNext",
+    "moduleResolution": "bundler",
+    "jsx": "react-jsx",
+    "strict": true,
+    "esModuleInterop": true,
+    "skipLibCheck": true,
+    "noEmit": true,
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "forceConsistentCasingInFileNames": true,
+    "allowImportingTsExtensions": true,
+    "paths": {
+      "@radix-ui/*": ["./node_modules/@radix-ui/*"],
+      "lucide-react": ["./node_modules/lucide-react"],
+      "class-variance-authority": ["./node_modules/class-variance-authority"],
+      "react-day-picker": ["./node_modules/react-day-picker"],
+      "embla-carousel-react": ["./node_modules/embla-carousel-react"],
+      "recharts": ["./node_modules/recharts"],
+      "cmdk": ["./node_modules/cmdk"],
+      "vaul": ["./node_modules/vaul"],
+      "react-hook-form": ["./node_modules/react-hook-form"],
+      "sonner": ["./node_modules/sonner"],
+      "input-otp": ["./node_modules/input-otp"],
+      "next-themes": ["./node_modules/next-themes"],
+      "react-router": ["./node_modules/react-router"]
+    }
+  },
+  "include": ["src"]
+}

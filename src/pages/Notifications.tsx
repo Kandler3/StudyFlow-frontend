@@ -1,52 +1,83 @@
-import React, { useState } from 'react';
-import { useNavigate } from 'react-router';
-import { Bell, Calendar, ClipboardList, CreditCard, Check } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Bell, Calendar, ClipboardList, Check, Info } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Header } from '../components/layout/Header';
 import { Card } from '../components/ui/card';
-import { Badge } from '../components/ui/badge';
 import { Button } from '../components/ui/button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { notifications as notificationsData } from '../data/mockData';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { apiClient } from '../api/client';
+import { toast } from 'sonner';
+import type { Notification } from '../types';
 
 export function Notifications() {
-  const navigate = useNavigate();
-  const [notifications, setNotifications] = useState(notificationsData);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
+  const [loading, setLoading] = useState(true);
 
-  const markAllAsRead = () => {
-    setNotifications(notifications.map(n => ({ ...n, read: true })));
+  const loadNotifications = async () => {
+    setLoading(true);
+    try {
+      const data = await apiClient.getNotifications();
+      setNotifications(data);
+    } catch (e) {
+      console.error('Failed to load notifications', e);
+      toast.error('Не удалось загрузить уведомления');
+    } finally {
+      setLoading(false);
+    }
   };
 
-  const handleNotificationClick = (notification: typeof notifications[0]) => {
-    // Mark as read
-    setNotifications(notifications.map(n => 
-      n.id === notification.id ? { ...n, read: true } : n
-    ));
+  useEffect(() => {
+    loadNotifications();
+  }, []);
 
-    // Navigate to target
-    if (notification.type === 'lesson') {
-      navigate(`/schedule/${notification.targetId}`);
-    } else if (notification.type === 'assignment') {
-      navigate(`/assignments/${notification.targetId}`);
-    } else if (notification.type === 'payment') {
-      navigate(`/payments/${notification.targetId}`);
+  const markAllAsRead = async () => {
+    try {
+      await apiClient.markAllRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('Failed to mark all as read', err);
+      toast.error('Не удалось отметить уведомления');
+    }
+  };
+
+  const handleNotificationClick = async (notification: Notification) => {
+    if (!notification.read) {
+      try {
+        await apiClient.markRead(notification.id);
+        setNotifications(prev =>
+          prev.map(n => (n.id === notification.id ? { ...n, read: true } : n))
+        );
+      } catch (err) {
+        console.error('Failed to mark notification as read', err);
+        toast.error('Не удалось отметить уведомления');
+      }
     }
   };
 
   const getIcon = (type: string) => {
     switch (type) {
-      case 'lesson':
+      case 'lesson_reminder':
         return Calendar;
-      case 'assignment':
+      case 'assignment_reminder':
         return ClipboardList;
-      case 'payment':
-        return CreditCard;
       default:
         return Bell;
     }
   };
 
-  const formatTime = (timestamp: string) => {
+  const getIconColor = (type: string) => {
+    switch (type) {
+      case 'lesson_reminder':
+        return 'bg-[#3390ec]/10 text-[#3390ec]';
+      case 'assignment_reminder':
+        return 'bg-[#ff9500]/10 text-[#ff9500]';
+      default:
+        return 'bg-[#999]/10 text-[#999]';
+    }
+  };
+
+  const formatRelativeTime = (timestamp: string) => {
     const date = new Date(timestamp);
     const now = new Date();
     const diffMs = now.getTime() - date.getTime();
@@ -61,7 +92,7 @@ export function Notifications() {
     } else if (diffDays < 7) {
       return `${diffDays} дн назад`;
     }
-    
+
     return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
   };
 
@@ -83,17 +114,19 @@ export function Notifications() {
       />
 
       <div className="p-4 space-y-4">
-        {unreadCount > 0 && (
-          <Card padding="sm">
-            <div className="text-center py-2">
-              <span className="text-sm font-medium">
-                {unreadCount} непрочитанных уведомлений
-              </span>
-            </div>
-          </Card>
-        )}
+        {/* Telegram info banner */}
+        <Card padding="sm">
+          <div className="flex items-center gap-2 py-1">
+            <Info className="w-4 h-4 text-[var(--tg-theme-hint-color,#999)] flex-shrink-0" />
+            <span className="text-xs text-[var(--tg-theme-hint-color,#999)]">
+              Уведомления доставляются через Telegram
+            </span>
+          </div>
+        </Card>
 
-        {notifications.length === 0 ? (
+        {loading ? (
+          <LoadingSpinner />
+        ) : notifications.length === 0 ? (
           <EmptyState
             icon={<Bell className="w-16 h-16" />}
             title="Нет уведомлений"
@@ -103,7 +136,7 @@ export function Notifications() {
           <div className="space-y-3">
             {notifications.map((notification) => {
               const Icon = getIcon(notification.type);
-              
+
               return (
                 <Card
                   key={notification.id}
@@ -111,11 +144,7 @@ export function Notifications() {
                   className={!notification.read ? 'border-2 border-[var(--tg-theme-button-color,#3390ec)]' : ''}
                 >
                   <div className="flex items-start gap-3">
-                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${
-                      notification.type === 'lesson' ? 'bg-[#3390ec]/10 text-[#3390ec]' :
-                      notification.type === 'assignment' ? 'bg-[#ff9500]/10 text-[#ff9500]' :
-                      'bg-[#34c759]/10 text-[#34c759]'
-                    }`}>
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${getIconColor(notification.type)}`}>
                       <Icon className="w-5 h-5" />
                     </div>
                     <div className="flex-1 min-w-0">
@@ -131,7 +160,7 @@ export function Notifications() {
                         {notification.message}
                       </p>
                       <div className="text-xs text-[var(--tg-theme-hint-color,#999)]">
-                        {formatTime(notification.timestamp)}
+                        {formatRelativeTime(notification.timestamp)}
                       </div>
                     </div>
                   </div>
