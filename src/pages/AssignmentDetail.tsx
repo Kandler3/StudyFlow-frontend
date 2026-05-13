@@ -11,6 +11,7 @@ import { Modal } from '../components/ui/Modal';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 import { computeAssignmentStatus, formatDate, formatTime } from '../types';
 import type { Assignment, Submission, Feedback, User, AssignmentStatus } from '../types';
 
@@ -36,6 +37,7 @@ export function AssignmentDetail() {
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewComment, setReviewComment] = useState('');
   const [reviewFileName, setReviewFileName] = useState('');
+  const [reviewGrade, setReviewGrade] = useState<number | undefined>(undefined);
   const [reviewSaving, setReviewSaving] = useState(false);
 
   useEffect(() => {
@@ -105,6 +107,7 @@ export function AssignmentDetail() {
       setFeedbacks(fbs);
     } catch (err) {
       console.error('Failed to submit assignment', err);
+      toast.error('Не удалось отправить задание');
     } finally {
       setSubmitSaving(false);
     }
@@ -125,14 +128,17 @@ export function AssignmentDetail() {
         submission_id: currentSubmission.id,
         file_id: fileId,
         comment: reviewComment.trim() || undefined,
+        grade: reviewGrade,
       });
 
       setFeedbacks([newFb]);
       setShowReviewModal(false);
       setReviewComment('');
       setReviewFileName('');
+      setReviewGrade(undefined);
     } catch (err) {
       console.error('Failed to create feedback', err);
+      toast.error('Не удалось отправить отзыв');
     } finally {
       setReviewSaving(false);
     }
@@ -151,14 +157,17 @@ export function AssignmentDetail() {
       const updated = await apiClient.updateFeedback(currentFeedback.id, {
         file_id: fileId || currentFeedback.file_id,
         comment: reviewComment.trim() || undefined,
+        grade: reviewGrade ?? currentFeedback.grade,
       });
 
       setFeedbacks([updated]);
       setShowReviewModal(false);
       setReviewComment('');
       setReviewFileName('');
+      setReviewGrade(undefined);
     } catch (err) {
       console.error('Failed to update feedback', err);
+      toast.error('Не удалось обновить отзыв');
     } finally {
       setReviewSaving(false);
     }
@@ -167,6 +176,7 @@ export function AssignmentDetail() {
   const openReviewModal = () => {
     setReviewComment(currentFeedback?.comment || '');
     setReviewFileName('');
+    setReviewGrade(currentFeedback?.grade || undefined);
     setShowReviewModal(true);
   };
 
@@ -352,6 +362,15 @@ export function AssignmentDetail() {
               </a>
             )}
 
+            {currentFeedback.grade && (
+              <div className="flex items-center gap-2 mt-2">
+                <span className="text-sm text-[var(--tg-theme-hint-color,#999)]">Оценка:</span>
+                <span className="text-lg font-bold text-[var(--tg-theme-button-color,#3390ec)]">
+                  {currentFeedback.grade}/5
+                </span>
+              </div>
+            )}
+
             {/* Edit feedback button for tutors */}
             {isTutor && (
               <Button
@@ -433,6 +452,30 @@ export function AssignmentDetail() {
             rows={4}
             placeholder="Оставьте отзыв о работе ученика..."
           />
+
+          {/* Grade selector */}
+          <div>
+            <label className="block text-sm font-medium text-[var(--tg-theme-text-color,#000)] mb-2">
+              Оценка (необязательно)
+            </label>
+            <div className="flex gap-2">
+              {[1, 2, 3, 4, 5].map((g) => (
+                <button
+                  key={g}
+                  type="button"
+                  onClick={() => setReviewGrade(reviewGrade === g ? undefined : g)}
+                  className={`w-10 h-10 rounded-full text-sm font-bold transition-colors ${
+                    reviewGrade === g
+                      ? 'bg-[var(--tg-theme-button-color,#3390ec)] text-white'
+                      : 'bg-[var(--tg-theme-secondary-bg-color,#f4f4f5)] text-[var(--tg-theme-text-color,#000)]'
+                  }`}
+                >
+                  {g}
+                </button>
+              ))}
+            </div>
+          </div>
+
           <Input
             label="Прикрепить файл (необязательно)"
             placeholder="Введите имя файла"

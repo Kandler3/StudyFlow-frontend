@@ -6,6 +6,7 @@ import * as schedule from './schedule';
 import * as homework from './homework';
 import * as payments from './payments';
 import * as files from './files';
+import * as faq from './faq';
 
 const useMock = import.meta.env.VITE_USE_MOCKS === 'true';
 
@@ -43,6 +44,7 @@ function buildRealApi(): ApiClient {
     getLesson: schedule.getLesson,
     updateLesson: schedule.updateLesson,
     cancelLesson: schedule.cancelLesson,
+    rescheduleLesson: schedule.rescheduleLesson,
 
     // Homework
     getAssignments: homework.getAssignments,
@@ -55,6 +57,9 @@ function buildRealApi(): ApiClient {
     getFeedbacks: homework.getFeedbacks,
     createFeedback: homework.createFeedback,
     updateFeedback: homework.updateFeedback,
+    getAssignmentFileUrl: homework.getAssignmentFileUrl,
+    getSubmissionFileUrl: homework.getSubmissionFileUrl,
+    getFeedbackFileUrl: homework.getFeedbackFileUrl,
 
     // Payments
     getPaymentInfo: payments.getPaymentInfo,
@@ -62,28 +67,29 @@ function buildRealApi(): ApiClient {
     submitReceipt: payments.submitReceipt,
     getReceipt: payments.getReceipt,
     verifyReceipt: payments.verifyReceipt,
+    getReceiptFileUrl: payments.getReceiptFileUrl,
 
     // Files
     initUpload: files.initUpload,
     getFileMeta: files.getFileMeta,
     getFileUrl: files.getFileUrl,
+    getFileDownloadUrl: files.getFileDownloadUrl,
+    confirmUpload: files.confirmUpload,
 
     // Notifications — local only, use mock
     getNotifications: mockApi.getNotifications,
     markRead: mockApi.markRead,
     markAllRead: mockApi.markAllRead,
+
+    // FAQ
+    listFAQs: faq.listFAQs,
+    listCategories: faq.listCategories,
+    getFAQ: faq.getFAQ,
   };
 }
 
-// Build the real API client and attach extra functions not in the ApiClient interface
+// Build the real API client
 const realApi = buildRealApi();
-
-// Extra domain-specific file URL functions (not in ApiClient interface)
-(realApi as any).getAssignmentFileUrl = homework.getAssignmentFileUrl;
-(realApi as any).getSubmissionFileUrl = homework.getSubmissionFileUrl;
-(realApi as any).getFeedbackFileUrl = homework.getFeedbackFileUrl;
-(realApi as any).getReceiptFileUrl = payments.getReceiptFileUrl;
-(realApi as any).confirmUpload = files.confirmUpload;
 
 const apiClient: ApiClient = useMock ? mockApi : realApi;
 

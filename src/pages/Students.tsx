@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 import type { User, TutorStudent } from '../types';
 
 interface RelationshipWithUser {
@@ -51,6 +52,7 @@ export function Students() {
       }
     } catch (err) {
       console.error('Failed to fetch students data', err);
+      toast.error('Не удалось загрузить список учеников');
     } finally {
       setLoading(false);
     }

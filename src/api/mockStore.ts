@@ -1,7 +1,7 @@
 import type {
   User, TutorProfile, TutorStudent, Slot, Lesson,
   Assignment, Submission, Feedback, Receipt, PaymentInfo,
-  FileInfo, Notification,
+  FileInfo, Notification, FAQ,
 } from '../types';
 
 import * as mockData from '../data/mockData';
@@ -16,6 +16,7 @@ import type {
   ApiPayments,
   ApiFiles,
   ApiNotifications,
+  ApiFAQ,
   ApiClient,
 } from './types';
 
@@ -199,7 +200,7 @@ const tutorStudentsApi: ApiTutorStudents = {
   async updateTutorStudent(
     tutorId: string,
     studentId: string,
-    fields: Partial<Pick<TutorStudent, 'lesson_price_rub' | 'lesson_connection_link'>>
+    fields: Partial<Pick<TutorStudent, 'lesson_price_rub' | 'lesson_connection_link' | 'status'>>
   ): Promise<TutorStudent> {
     await delay();
     const key = tsKey(tutorId, studentId);
@@ -331,15 +332,60 @@ const lessonsApi: ApiLessons = {
     await delay();
     const existing = lessonMap.get(id);
     if (!existing) throw new Error(`Lesson ${id} not found`);
+
+    // Cancel the lesson
     const updated: Lesson = { ...existing, status: 'cancelled' };
     lessonMap.set(id, updated);
+
+    // Free the slot
+    const slot = slotMap.get(existing.slot_id);
+    if (slot) {
+      slotMap.set(existing.slot_id, { ...slot, is_booked: false });
+    }
+
     return { ...updated };
+  },
+
+  async rescheduleLesson(lessonId: string, newSlotId: string): Promise<Lesson> {
+    await delay();
+    const existing = lessonMap.get(lessonId);
+    if (!existing) throw new Error(`Lesson ${lessonId} not found`);
+    const newSlot = slotMap.get(newSlotId);
+    if (!newSlot) throw new Error(`Slot ${newSlotId} not found`);
+    if (newSlot.is_booked) throw new Error(`Slot ${newSlotId} is already booked`);
+
+    // Cancel old lesson
+    const cancelledLesson: Lesson = { ...existing, status: 'cancelled' };
+    lessonMap.set(lessonId, cancelledLesson);
+
+    // Free old slot
+    const oldSlot = slotMap.get(existing.slot_id);
+    if (oldSlot) {
+      slotMap.set(oldSlot.id, { ...oldSlot, is_booked: false });
+    }
+
+    // Book new slot
+    slotMap.set(newSlotId, { ...newSlot, is_booked: true });
+
+    // Create replacement lesson
+    const newLesson: Lesson = {
+      id: idGen2.next('l'),
+      slot_id: newSlotId,
+      student_id: existing.student_id,
+      status: 'booked',
+      is_paid: existing.is_paid,
+      connection_link: existing.connection_link,
+      price_rub: existing.price_rub,
+      payment_info: existing.payment_info,
+    };
+    lessonMap.set(newLesson.id, newLesson);
+    return { ...newLesson };
   },
 };
 
 // ── Homework ──
 const homeworkApi: ApiHomework = {
-  async getAssignments(filters?: { tutor_id?: string; student_id?: string }): Promise<Assignment[]> {
+  async getAssignments(filters?: { tutor_id?: string; student_id?: string; status_filter?: string }): Promise<Assignment[]> {
     await delay();
     let result = Array.from(assignmentMap.values());
     if (filters?.tutor_id) {
@@ -429,25 +475,41 @@ const homeworkApi: ApiHomework = {
       .map((f) => ({ ...f }));
   },
 
-  async createFeedback(payload: { submission_id: string; file_id?: string; comment?: string }): Promise<Feedback> {
+  async createFeedback(payload: { submission_id: string; file_id?: string; comment?: string; grade?: number }): Promise<Feedback> {
     await delay();
     const feedback: Feedback = {
       id: idGen2.next('fb'),
       submission_id: payload.submission_id,
       file_id: payload.file_id,
       comment: payload.comment,
+      grade: payload.grade,
     };
     feedbackMap.set(feedback.id, feedback);
     return { ...feedback };
   },
 
-  async updateFeedback(id: string, fields: Partial<Pick<Feedback, 'file_id' | 'comment'>>): Promise<Feedback> {
+  async updateFeedback(id: string, fields: Partial<Pick<Feedback, 'file_id' | 'comment'> & { grade?: number }>): Promise<Feedback> {
     await delay();
     const existing = feedbackMap.get(id);
     if (!existing) throw new Error(`Feedback ${id} not found`);
     const updated: Feedback = { ...existing, ...fields };
     feedbackMap.set(id, updated);
     return { ...updated };
+  },
+
+  async getAssignmentFileUrl(assignmentId: string): Promise<string> {
+    await delay();
+    return `https://mock-file.example.com/assignment/${assignmentId}`;
+  },
+
+  async getSubmissionFileUrl(submissionId: string): Promise<string> {
+    await delay();
+    return `https://mock-file.example.com/submission/${submissionId}`;
+  },
+
+  async getFeedbackFileUrl(feedbackId: string): Promise<string> {
+    await delay();
+    return `https://mock-file.example.com/feedback/${feedbackId}`;
   },
 };
 
@@ -488,19 +550,21 @@ const paymentsApi: ApiPayments = {
 
   async submitReceipt(payload: {
     lesson_id: string;
-    tutor_id: string;
-    student_id: string;
     file_id: string;
-    price_rub: number;
   }): Promise<Receipt> {
     await delay();
+    // Derive tutor_id, student_id, price_rub from the lesson (server-side behaviour)
+    const lesson = lessonMap.get(payload.lesson_id);
+    const slot = lesson ? slotMap.get(lesson.slot_id) : undefined;
+    const tutorProfile = slot ? tutorProfileMap.get(slot.tutor_id) : undefined;
+
     const receipt: Receipt = {
       id: idGen2.next('r'),
       lesson_id: payload.lesson_id,
-      tutor_id: payload.tutor_id,
-      student_id: payload.student_id,
+      tutor_id: slot?.tutor_id ?? '',
+      student_id: lesson?.student_id ?? '',
       file_id: payload.file_id,
-      price_rub: payload.price_rub,
+      price_rub: lesson?.price_rub ?? tutorProfile?.lesson_price_rub ?? 0,
       is_verified: false,
       created_at: new Date().toISOString(),
     };
@@ -522,6 +586,11 @@ const paymentsApi: ApiPayments = {
     const updated: Receipt = { ...existing, is_verified: true };
     receiptMap.set(id, updated);
     return { ...updated };
+  },
+
+  async getReceiptFileUrl(receiptId: string): Promise<string> {
+    await delay();
+    return `https://mock-receipt-file.example.com/${receiptId}`;
   },
 };
 
@@ -545,6 +614,20 @@ const filesApi: ApiFiles = {
 
   getFileUrl(id: string): string {
     return `/files/${id}?download=1`;
+  },
+
+  async getFileDownloadUrl(fileId: string): Promise<string> {
+    await delay();
+    const meta = fileInfoMap.get(fileId);
+    if (!meta) throw new Error(`File ${fileId} not found`);
+    return `/files/${fileId}?download=1`;
+  },
+
+  async confirmUpload(fileId: string): Promise<FileInfo> {
+    await delay();
+    const meta = fileInfoMap.get(fileId);
+    if (!meta) throw new Error(`File ${fileId} not found`);
+    return { ...meta };
   },
 };
 
@@ -573,6 +656,29 @@ const notificationsApi: ApiNotifications = {
   },
 };
 
+// ── FAQ ──
+const faqMap = new Map<string, FAQ>();
+mockData.faqData.forEach((f) => faqMap.set(f.id, { ...f }));
+
+const faqApi: ApiFAQ = {
+  async listFAQs(category?: string): Promise<FAQ[]> {
+    await delay();
+    const all = [...faqMap.values()];
+    return category ? all.filter((f) => f.category === category) : all;
+  },
+  async listCategories(): Promise<string[]> {
+    await delay();
+    const cats = new Set([...faqMap.values()].map((f) => f.category));
+    return [...cats];
+  },
+  async getFAQ(id: string): Promise<FAQ> {
+    await delay();
+    const faq = faqMap.get(id);
+    if (!faq) throw new Error('FAQ not found');
+    return { ...faq };
+  },
+};
+
 // ── Combined mock API ──
 export const mockApi: ApiClient = {
   ...authApi,
@@ -584,4 +690,5 @@ export const mockApi: ApiClient = {
   ...paymentsApi,
   ...filesApi,
   ...notificationsApi,
+  ...faqApi,
 };

@@ -9,6 +9,7 @@ import { Input, TextArea } from '../components/ui/input';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 import type { User } from '../types';
 
 export function AssignmentCreate() {
@@ -64,6 +65,7 @@ export function AssignmentCreate() {
         }
       } catch (err) {
         console.error('Failed to fetch students', err);
+        toast.error('Не удалось загрузить список учеников');
       } finally {
         setLoadingStudents(false);
       }
@@ -108,6 +110,7 @@ export function AssignmentCreate() {
       navigate('/assignments');
     } catch (err) {
       console.error('Failed to create assignment', err);
+      toast.error('Не удалось создать задание');
     } finally {
       setSubmitting(false);
     }

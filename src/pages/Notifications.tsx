@@ -7,6 +7,7 @@ import { Button } from '../components/ui/button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 import type { Notification } from '../types';
 
 export function Notifications() {
@@ -20,6 +21,7 @@ export function Notifications() {
       setNotifications(data);
     } catch (e) {
       console.error('Failed to load notifications', e);
+      toast.error('Не удалось загрузить уведомления');
     } finally {
       setLoading(false);
     }
@@ -30,16 +32,26 @@ export function Notifications() {
   }, []);
 
   const markAllAsRead = async () => {
-    await apiClient.markAllRead();
-    setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    try {
+      await apiClient.markAllRead();
+      setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+    } catch (err) {
+      console.error('Failed to mark all as read', err);
+      toast.error('Не удалось отметить уведомления');
+    }
   };
 
   const handleNotificationClick = async (notification: Notification) => {
     if (!notification.read) {
-      await apiClient.markRead(notification.id);
-      setNotifications(prev =>
-        prev.map(n => (n.id === notification.id ? { ...n, read: true } : n))
-      );
+      try {
+        await apiClient.markRead(notification.id);
+        setNotifications(prev =>
+          prev.map(n => (n.id === notification.id ? { ...n, read: true } : n))
+        );
+      } catch (err) {
+        console.error('Failed to mark notification as read', err);
+        toast.error('Не удалось отметить уведомления');
+      }
     }
   };
 

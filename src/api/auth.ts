@@ -17,17 +17,17 @@ function toUser(data: Record<string, unknown>): User {
  * POST /users/sign-up/telegram
  *
  * Creates a new user via Telegram auth.
- * The backend expects snake_case JSON with telegram_id as int64.
+ * The backend expects camelCase JSON with telegramId as int64.
  */
 export async function signUpTelegram(
   payload: SignUpTelegramPayload
 ): Promise<User> {
   const body: Record<string, unknown> = {
-    telegram_id: parseInt(payload.telegram_id, 10),
+    telegramId: parseInt(payload.telegram_id, 10),
     role: payload.role || 'tutor',
   };
-  if (payload.first_name) body.first_name = payload.first_name;
-  if (payload.last_name) body.last_name = payload.last_name;
+  if (payload.first_name) body.firstName = payload.first_name;
+  if (payload.last_name) body.lastName = payload.last_name;
   if (payload.username) body.username = payload.username;
   if (payload.timezone) body.timezone = payload.timezone;
 

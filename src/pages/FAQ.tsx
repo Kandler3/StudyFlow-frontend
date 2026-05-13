@@ -1,30 +1,111 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Search, ChevronDown, ChevronUp } from 'lucide-react';
+import { toast } from 'sonner';
 import { Layout } from '../components/layout/Layout';
 import { Header } from '../components/layout/Header';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
 import { EmptyState } from '../components/ui/EmptyState';
-import { faqData } from '../data/mockData';
+import { LoadingSpinner } from '../components/ui/LoadingSpinner';
+import { apiClient } from '../api/client';
+import type { FAQ } from '../types';
 
 export function FAQ() {
   const [searchQuery, setSearchQuery] = useState('');
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
+  const [faqs, setFaqs] = useState<FAQ[]>([]);
+  const [categories, setCategories] = useState<string[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [hasError, setHasError] = useState(false);
 
-  const categories = ['all', ...Array.from(new Set(faqData.map(item => item.category)))];
+  useEffect(() => {
+    let cancelled = false;
 
-  const filteredFaq = faqData.filter((item) => {
-    const matchesSearch = 
+    async function load() {
+      try {
+        setIsLoading(true);
+        setHasError(false);
+
+        const [faqsData, catsData] = await Promise.all([
+          apiClient.listFAQs(),
+          apiClient.listCategories(),
+        ]);
+
+        if (cancelled) return;
+
+        setFaqs(faqsData);
+        setCategories(catsData);
+      } catch {
+        if (cancelled) return;
+        setHasError(true);
+        toast.error('Не удалось загрузить вопросы. Попробуйте позже.');
+      } finally {
+        if (!cancelled) {
+          setIsLoading(false);
+        }
+      }
+    }
+
+    load();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  const filteredFaq = faqs.filter((item) => {
+    const matchesSearch =
       item.question.toLowerCase().includes(searchQuery.toLowerCase()) ||
       item.answer.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesCategory = selectedCategory === 'all' || item.category === selectedCategory;
+    const matchesCategory =
+      selectedCategory === 'all' || item.category === selectedCategory;
     return matchesSearch && matchesCategory;
   });
 
   const toggleExpanded = (id: string) => {
     setExpandedId(expandedId === id ? null : id);
   };
+
+  if (isLoading) {
+    return (
+      <Layout hideNav>
+        <Header title="Часто задаваемые вопросы" showBack />
+        <div className="flex justify-center items-center py-20">
+          <LoadingSpinner />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (hasError) {
+    return (
+      <Layout hideNav>
+        <Header title="Часто задаваемые вопросы" showBack />
+        <div className="p-4">
+          <EmptyState
+            icon={<Search className="w-16 h-16" />}
+            title="Ошибка загрузки"
+            description="Не удалось загрузить вопросы. Проверьте подключение к интернету и попробуйте снова."
+          />
+        </div>
+      </Layout>
+    );
+  }
+
+  if (faqs.length === 0) {
+    return (
+      <Layout hideNav>
+        <Header title="Часто задаваемые вопросы" showBack />
+        <div className="p-4">
+          <EmptyState
+            icon={<Search className="w-16 h-16" />}
+            title="Нет данных"
+            description="Вопросы пока не добавлены."
+          />
+        </div>
+      </Layout>
+    );
+  }
 
   return (
     <Layout hideNav>
@@ -41,7 +122,7 @@ export function FAQ() {
 
         {/* Category Filters */}
         <div className="flex gap-2 overflow-x-auto pb-2 -mx-4 px-4 scrollbar-hide">
-          {categories.map((category) => (
+          {['all', ...categories].map((category) => (
             <button
               key={category}
               onClick={() => setSelectedCategory(category)}

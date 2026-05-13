@@ -6,6 +6,7 @@ import { Card } from '../components/ui/card';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 
 type Period = 'week' | 'month' | 'year';
 
@@ -47,6 +48,7 @@ export function Analytics() {
       }
     } catch (e) {
       console.error('Failed to load analytics', e);
+      toast.error('Не удалось загрузить аналитику');
     } finally {
       setLoading(false);
     }

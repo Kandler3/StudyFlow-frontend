@@ -1,6 +1,9 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router';
-import { Calendar, ClipboardList, CreditCard, Settings, ArrowRight, BookOpen, LogIn } from 'lucide-react';
+import {
+  Calendar, ClipboardList, CreditCard, Settings,
+  ArrowRight, BookOpen, LogIn, Loader2, Smartphone,
+} from 'lucide-react';
 import { Button } from '../components/ui/button';
 import { Card } from '../components/ui/card';
 import { Input } from '../components/ui/input';
@@ -10,9 +13,15 @@ const useMock = import.meta.env.VITE_USE_MOCKS === 'true';
 
 export function Welcome() {
   const navigate = useNavigate();
-  const { loginAs, loginWithTelegramId, authUser } = useApp();
+  const {
+    loginAs, loginWithTelegramId, authUser,
+    isInitializing, needsRegistration, needsTelegram,
+    telegramUserInfo, completeRegistration,
+  } = useApp();
   const [telegramId, setTelegramId] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
+  const [isRegistering, setIsRegistering] = useState(false);
+  const [showDevLogin, setShowDevLogin] = useState(false);
 
   const features = [
     {
@@ -44,7 +53,7 @@ export function Welcome() {
     navigate('/schedule');
   };
 
-  // ── Real-mode: login with telegram ID ──
+  // ── Real-mode dev helper: login with telegram ID ──
   const handleTelegramLogin = async () => {
     const trimmed = telegramId.trim();
     if (!trimmed) return;
@@ -65,7 +74,20 @@ export function Welcome() {
     }
   };
 
-  // ── Redirect: real mode — already logged in; mock mode — completed onboarding ──
+  // ── Registration: complete sign-up with chosen role ──
+  const handleCompleteRegistration = async (role: 'tutor' | 'student') => {
+    setIsRegistering(true);
+    try {
+      await completeRegistration(role);
+      navigate('/schedule');
+    } catch {
+      // Error toast is already shown by AppContext
+    } finally {
+      setIsRegistering(false);
+    }
+  };
+
+  // ── Redirect: already logged in ──
   React.useEffect(() => {
     if (!useMock && authUser) {
       navigate('/schedule', { replace: true });
@@ -108,7 +130,7 @@ export function Welcome() {
         </div>
 
         {useMock ? (
-          // ── MOCK MODE: Quick start button ──
+          // ══════ MOCK MODE ══════
           <>
             <Button fullWidth size="lg" onClick={handleStart}>
               Начать
@@ -117,38 +139,111 @@ export function Welcome() {
               Демо-режим: вход как репетитор
             </p>
           </>
-        ) : (
-          // ── REAL MODE: Telegram ID login ──
+        ) : isInitializing ? (
+          // ══════ REAL MODE — Loading ══════
+          <div className="flex flex-col items-center gap-4 py-8">
+            <Loader2 className="w-8 h-8 text-white animate-spin" />
+            <p className="text-white/80 text-sm">Загрузка...</p>
+          </div>
+        ) : needsRegistration ? (
+          // ══════ REAL MODE — Registration (new user) ══════
           <>
             <Card className="bg-white/95 backdrop-blur mb-3">
-              <div className="space-y-3">
-                <label className="block text-sm font-medium text-gray-700">
-                  Telegram ID
-                </label>
-                <Input
-                  type="text"
-                  inputMode="numeric"
-                  placeholder="Введите ваш Telegram ID"
-                  value={telegramId}
-                  onChange={(e) => setTelegramId(e.target.value)}
-                  onKeyDown={handleKeyDown}
-                />
+              <div className="space-y-4">
+                <div className="text-center">
+                  <p className="text-gray-600 text-sm">
+                    {telegramUserInfo?.first_name
+                      ? `Добро пожаловать, ${telegramUserInfo.first_name}!`
+                      : 'Добро пожаловать!'}
+                  </p>
+                  <p className="text-gray-500 text-xs mt-1">
+                    Выберите роль для продолжения
+                  </p>
+                </div>
+
                 <Button
                   fullWidth
                   size="lg"
-                  onClick={handleTelegramLogin}
-                  disabled={isLoggingIn || !telegramId.trim()}
+                  onClick={() => handleCompleteRegistration('tutor')}
+                  disabled={isRegistering}
                 >
-                  <LogIn className="w-5 h-5 mr-2" />
-                  {isLoggingIn ? 'Вход...' : 'Войти'}
+                  {isRegistering ? (
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  ) : null}
+                  Войти как тьютор
+                </Button>
+
+                <Button
+                  fullWidth
+                  size="lg"
+                  onClick={() => handleCompleteRegistration('student')}
+                  disabled={isRegistering}
+                >
+                  {isRegistering ? (
+                    <Loader2 className="w-5 h-5 mr-2 animate-spin" />
+                  ) : null}
+                  Войти как ученик
                 </Button>
               </div>
             </Card>
             <p className="text-center text-white/70 text-sm mt-6">
-              Войдите с помощью Telegram ID для начала работы
+              Регистрация в приложении StudyFlow
             </p>
           </>
-        )}
+        ) : needsTelegram ? (
+          // ══════ REAL MODE — Not in Telegram ══════
+          <>
+            <Card className="bg-white/95 backdrop-blur mb-3">
+              <div className="flex flex-col items-center gap-4 py-4">
+                <Smartphone className="w-12 h-12 text-[#3390ec]/60" />
+                <div className="text-center">
+                  <p className="text-gray-700 font-medium">
+                    Откройте приложение через Telegram
+                  </p>
+                  <p className="text-gray-500 text-sm mt-1">
+                    StudyFlow работает внутри Telegram Mini App.
+                    Пожалуйста, откройте его через Telegram.
+                  </p>
+                </div>
+              </div>
+            </Card>
+
+            {/* Dev login toggle */}
+            {!showDevLogin ? (
+              <button
+                className="w-full text-center text-white/50 text-xs hover:text-white/80 transition-colors cursor-pointer"
+                onClick={() => setShowDevLogin(true)}
+              >
+                Dev: вход по Telegram ID
+              </button>
+            ) : (
+              <Card className="bg-white/95 backdrop-blur">
+                <div className="space-y-3">
+                  <label className="block text-sm font-medium text-gray-700">
+                    Telegram ID (dev)
+                  </label>
+                  <Input
+                    type="text"
+                    inputMode="numeric"
+                    placeholder="Введите ваш Telegram ID"
+                    value={telegramId}
+                    onChange={(e) => setTelegramId(e.target.value)}
+                    onKeyDown={handleKeyDown}
+                  />
+                  <Button
+                    fullWidth
+                    size="lg"
+                    onClick={handleTelegramLogin}
+                    disabled={isLoggingIn || !telegramId.trim()}
+                  >
+                    <LogIn className="w-5 h-5 mr-2" />
+                    {isLoggingIn ? 'Вход...' : 'Войти (dev)'}
+                  </Button>
+                </div>
+              </Card>
+            )}
+          </>
+        ) : null}
       </div>
     </div>
   );

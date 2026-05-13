@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 import type { Lesson, Slot, User } from '../types';
 
 interface LessonWithMeta {
@@ -97,6 +98,7 @@ export function Schedule() {
       }
     } catch (err) {
       console.error('Failed to fetch schedule data', err);
+      toast.error('Не удалось загрузить расписание');
     } finally {
       setLoading(false);
     }
@@ -114,6 +116,7 @@ export function Schedule() {
       await fetchData();
     } catch (err) {
       console.error('Failed to book slot', err);
+      toast.error('Не удалось забронировать слот');
     } finally {
       setBookingSlotId(null);
     }

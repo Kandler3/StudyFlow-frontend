@@ -11,6 +11,7 @@ import { Modal } from '../components/ui/Modal';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 import { formatDate, formatTime } from '../types';
 import type { Lesson, Slot, User, Receipt, PaymentInfo } from '../types';
 
@@ -35,6 +36,9 @@ export function PaymentDetail() {
 
   // Verify state
   const [verifying, setVerifying] = useState(false);
+
+  // Receipt file URL (fetched async for download)
+  const [receiptFileUrl, setReceiptFileUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!id || !authUser) return;
@@ -67,6 +71,12 @@ export function PaymentDetail() {
         const receiptList = await apiClient.getReceipts(receiptFilters);
         const lessonReceipts = receiptList.filter(r => r.lesson_id === currentId);
         setReceipts(lessonReceipts);
+
+        // Fetch receipt file URL for download
+        if (lessonReceipts.length > 0) {
+          const fileUrl = await apiClient.getReceiptFileUrl(lessonReceipts[0].id).catch(() => null);
+          setReceiptFileUrl(fileUrl);
+        }
 
         // Pre-fill price for receipt form
         const priceValue = lessonData.price_rub ?? payInfoData?.price_rub ?? 0;
@@ -102,21 +112,23 @@ export function PaymentDetail() {
 
       const newReceipt = await apiClient.submitReceipt({
         lesson_id: id,
-        tutor_id: slot.tutor_id,
-        student_id: authUser.id,
         file_id: fileId,
-        price_rub: receiptPrice,
       });
 
       setReceipts([newReceipt]);
       setShowReceiptModal(false);
       setReceiptFileName('');
 
+      // Fetch receipt file URL for the new receipt
+      const fileUrl = await apiClient.getReceiptFileUrl(newReceipt.id).catch(() => null);
+      setReceiptFileUrl(fileUrl);
+
       // Refetch lesson to get updated is_paid status
       const updatedLesson = await apiClient.getLesson(id);
       setLesson(updatedLesson);
     } catch (err) {
       console.error('Failed to submit receipt', err);
+      toast.error('Не удалось отправить чек');
     } finally {
       setSubmitting(false);
     }
@@ -137,6 +149,7 @@ export function PaymentDetail() {
       }
     } catch (err) {
       console.error('Failed to verify receipt', err);
+      toast.error('Не удалось подтвердить чек');
     } finally {
       setVerifying(false);
     }
@@ -272,11 +285,14 @@ export function PaymentDetail() {
               </div>
 
               <a
-                href={apiClient.getFileUrl(currentReceipt.file_id)}
+                href={receiptFileUrl ?? '#'}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-3 p-3 bg-[var(--tg-theme-secondary-bg-color,#f4f4f5)] rounded-xl"
-                onClick={(e) => e.stopPropagation()}
+                onClick={(e) => {
+                  if (!receiptFileUrl) e.preventDefault();
+                  e.stopPropagation();
+                }}
               >
                 <FileText className="w-5 h-5 text-[var(--tg-theme-button-color,#3390ec)]" />
                 <span className="flex-1 text-sm">Скачать чек</span>

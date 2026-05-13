@@ -161,7 +161,7 @@ export async function updateTutorStudent(
   tutorId: string,
   studentId: string,
   fields: Partial<
-    Pick<TutorStudent, 'lesson_price_rub' | 'lesson_connection_link'>
+    Pick<TutorStudent, 'lesson_price_rub' | 'lesson_connection_link' | 'status'>
   >,
 ): Promise<TutorStudent> {
   const body: Record<string, any> = {};
@@ -169,6 +169,8 @@ export async function updateTutorStudent(
     body.lessonPriceRub = fields.lesson_price_rub;
   if (fields.lesson_connection_link !== undefined)
     body.lessonConnectionLink = fields.lesson_connection_link;
+  if (fields.status !== undefined)
+    body.status = fields.status;
 
   const { data } = await httpClient.patch(
     `/users/tutor-students/${tutorId}/${studentId}`,

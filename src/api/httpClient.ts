@@ -1,24 +1,25 @@
 import axios from 'axios';
 import { toast } from 'sonner';
-import { getCachedAuthHeader, refreshAuthHeader, getCachedTelegramId, clearTelegramId } from './authHeader';
+import { getAuthHeader, clearAuth } from './authHeader';
 
 const httpClient = axios.create({
   baseURL: import.meta.env.VITE_API_URL as string || 'http://localhost',
   timeout: 15000,
-  headers: { 'Content-Type': 'application/json' },
+  headers: {
+    'Content-Type': 'application/json',
+    ...(import.meta.env.VITE_NGROK_SKIP_WARNING === 'true'
+      ? { 'ngrok-skip-browser-warning': 'true' }
+      : {}),
+  },
 });
 
 httpClient.interceptors.request.use(async (config) => {
-  const skipAuthPaths = ['/health', '/users/sign-up/telegram'];
+  const skipAuthPaths = ['/health', '/users/sign-up/telegram', '/faqs'];
   const shouldSkip = skipAuthPaths.some(path => config.url?.includes(path));
 
   if (!shouldSkip) {
-    const telegramId = getCachedTelegramId();
-    if (telegramId) {
-      let header = getCachedAuthHeader();
-      if (!header) {
-        header = await refreshAuthHeader();
-      }
+    const header = getAuthHeader();
+    if (header) {
       config.headers.Authorization = header;
     }
   }
@@ -29,7 +30,7 @@ httpClient.interceptors.response.use(
   (response) => response,
   (error) => {
     if (error.response?.status === 401) {
-      clearTelegramId();
+      clearAuth();
       toast.error('Сессия истекла. Войдите заново.');
       window.location.href = '/welcome';
     } else if (!error.response) {

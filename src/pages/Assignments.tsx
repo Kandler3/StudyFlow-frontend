@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 import { computeAssignmentStatus, formatDate } from '../types';
 import type { Assignment, Submission, Feedback, User, AssignmentStatus } from '../types';
 
@@ -77,6 +78,7 @@ export function Assignments() {
         setItems(itemsWithMeta);
       } catch (err) {
         console.error('Failed to fetch assignments', err);
+        toast.error('Не удалось загрузить задания');
       } finally {
         setLoading(false);
       }

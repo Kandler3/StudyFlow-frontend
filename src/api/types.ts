@@ -1,7 +1,7 @@
 import type {
   User, TutorProfile, TutorStudent, Slot, Lesson,
   Assignment, Submission, Feedback, Receipt, PaymentInfo,
-  FileInfo, Notification,
+  FileInfo, Notification, FAQ,
 } from '../types';
 
 // ── Auth ──
@@ -33,7 +33,7 @@ export interface ApiTutorStudents {
   getTutorStudent(tutorId: string, studentId: string): Promise<TutorStudent | undefined>;
   createTutorStudent(payload: { tutor_id: string; student_id: string; lesson_price_rub?: number; lesson_connection_link?: string }): Promise<TutorStudent>;
   acceptInvitation(tutorId: string, studentId: string): Promise<TutorStudent>;
-  updateTutorStudent(tutorId: string, studentId: string, fields: Partial<Pick<TutorStudent, 'lesson_price_rub' | 'lesson_connection_link'>>): Promise<TutorStudent>;
+  updateTutorStudent(tutorId: string, studentId: string, fields: Partial<Pick<TutorStudent, 'lesson_price_rub' | 'lesson_connection_link' | 'status'>>): Promise<TutorStudent>;
   deleteTutorStudent(tutorId: string, studentId: string): Promise<void>;
 }
 
@@ -53,36 +53,64 @@ export interface ApiLessons {
   getLesson(id: string): Promise<Lesson>;
   updateLesson(id: string, fields: Partial<Pick<Lesson, 'connection_link' | 'price_rub' | 'payment_info'>>): Promise<Lesson>;
   cancelLesson(id: string): Promise<Lesson>;
+  rescheduleLesson(lessonId: string, newSlotId: string): Promise<Lesson>;
 }
 
 // ── Homework ──
 export interface ApiHomework {
   getAssignments(filters?: { tutor_id?: string; student_id?: string; status_filter?: string }): Promise<Assignment[]>;
+  /**
+   * Create a new assignment.
+   * Note: OpenAPI spec lists `file_id` in `required`, but this is a spec bug --
+   * the required array uses snake_case names that don't match the camelCase
+   * property names (`fileId`), so the constraint does not apply.
+   * The field is effectively optional.
+   */
   createAssignment(payload: { tutor_id: string; student_id: string; title: string; description: string; file_id?: string; due_date: string }): Promise<Assignment>;
   getAssignment(id: string): Promise<Assignment>;
   updateAssignment(id: string, fields: Partial<Pick<Assignment, 'title' | 'description' | 'file_id' | 'due_date'>>): Promise<Assignment>;
   deleteAssignment(id: string): Promise<void>;
   getSubmissions(assignmentId: string): Promise<Submission[]>;
+  /**
+   * Submit work for an assignment.
+   * Note: OpenAPI spec lists `file_id` in `required`, but this is a spec bug --
+   * the required array uses snake_case names that don't match the camelCase
+   * property names (`fileId`), so the constraint does not apply.
+   * The field is effectively optional.
+   */
   createSubmission(payload: { assignment_id: string; file_id?: string; comment?: string }): Promise<Submission>;
   getFeedbacks(assignmentId?: string): Promise<Feedback[]>;
-  createFeedback(payload: { submission_id: string; file_id?: string; comment?: string }): Promise<Feedback>;
-  updateFeedback(id: string, fields: Partial<Pick<Feedback, 'file_id' | 'comment'>>): Promise<Feedback>;
+  /**
+   * Create feedback for a submission.
+   * Note: OpenAPI spec lists `file_id` in `required`, but this is a spec bug --
+   * the required array uses snake_case names that don't match the camelCase
+   * property names (`fileId`), so the constraint does not apply.
+   * The field is effectively optional.
+   */
+  createFeedback(payload: { submission_id: string; file_id?: string; comment?: string; grade?: number }): Promise<Feedback>;
+  updateFeedback(id: string, fields: Partial<Pick<Feedback, 'file_id' | 'comment'> & { grade?: number }>): Promise<Feedback>;
+  getAssignmentFileUrl(assignmentId: string): Promise<string>;
+  getSubmissionFileUrl(submissionId: string): Promise<string>;
+  getFeedbackFileUrl(feedbackId: string): Promise<string>;
 }
 
 // ── Payments ──
 export interface ApiPayments {
   getPaymentInfo(lessonId: string): Promise<PaymentInfo>;
   getReceipts(filters?: { tutor_id?: string; student_id?: string }): Promise<Receipt[]>;
-  submitReceipt(payload: { lesson_id: string; tutor_id: string; student_id: string; file_id: string; price_rub: number }): Promise<Receipt>;
+  submitReceipt(payload: { lesson_id: string; file_id: string }): Promise<Receipt>;
   getReceipt(id: string): Promise<Receipt>;
   verifyReceipt(id: string): Promise<Receipt>;
+  getReceiptFileUrl(receiptId: string): Promise<string>;
 }
 
 // ── Files ──
 export interface ApiFiles {
   initUpload(filename: string): Promise<{ file_id: string; upload_url: string }>;
   getFileMeta(id: string): Promise<FileInfo>;
-  getFileUrl(id: string): string; // Returns a fake URL
+  getFileUrl(id: string): string;
+  getFileDownloadUrl(fileId: string): Promise<string>;
+  confirmUpload(fileId: string): Promise<FileInfo>;
 }
 
 // ── Notifications (local only) ──
@@ -92,5 +120,12 @@ export interface ApiNotifications {
   markAllRead(): Promise<void>;
 }
 
+// ── FAQ ──
+export interface ApiFAQ {
+  listFAQs(category?: string): Promise<FAQ[]>;
+  listCategories(): Promise<string[]>;
+  getFAQ(id: string): Promise<FAQ>;
+}
+
 // Combined API interface
-export interface ApiClient extends ApiAuth, ApiUsers, ApiTutorStudents, ApiSlots, ApiLessons, ApiHomework, ApiPayments, ApiFiles, ApiNotifications {}
+export interface ApiClient extends ApiAuth, ApiUsers, ApiTutorStudents, ApiSlots, ApiLessons, ApiHomework, ApiPayments, ApiFiles, ApiNotifications, ApiFAQ {}

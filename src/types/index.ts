@@ -152,6 +152,14 @@ export function formatDate(isoString: string): string {
   return date.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+// FAQ
+export interface FAQ {
+  id: string;
+  category: string;
+  question: string;
+  answer: string;
+}
+
 // Helper: format ISO datetime to display time
 export function formatTime(isoString: string): string {
   const date = new Date(isoString);

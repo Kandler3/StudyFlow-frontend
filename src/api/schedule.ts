@@ -138,3 +138,14 @@ export async function cancelLesson(id: string): Promise<Lesson> {
   const { data } = await httpClient.post(`/schedule/lessons/${id}/cancel`);
   return toLesson(data);
 }
+
+export async function rescheduleLesson(
+  lessonId: string,
+  newSlotId: string,
+): Promise<Lesson> {
+  const { data } = await httpClient.post(
+    `/schedule/lessons/${lessonId}/reschedule`,
+    { newSlotId },
+  );
+  return toLesson(data);
+}

@@ -9,6 +9,7 @@ import { Badge } from '../components/ui/badge';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 import type { Lesson, Slot, User } from '../types';
 
 function getDurationMinutes(startsAt: string, endsAt: string): number {
@@ -81,6 +82,7 @@ export function LessonDetail() {
       setLesson(updatedLesson);
     } catch (err) {
       console.error('Failed to cancel lesson', err);
+      toast.error('Не удалось отменить занятие');
     } finally {
       setCancelling(false);
     }

@@ -59,15 +59,12 @@ export async function getReceipts(
 /**
  * POST /payment/receipts
  *
- * The frontend payload includes lesson_id, tutor_id, student_id, file_id, price_rub,
- * but the backend only expects { lessonId, fileId } (the rest is inferred from the lesson).
+ * Only { lessonId, fileId } is sent to the backend — the rest
+ * (tutor_id, student_id, price_rub) is inferred from the lesson server-side.
  */
 export async function submitReceipt(payload: {
   lesson_id: string;
-  tutor_id: string;
-  student_id: string;
   file_id: string;
-  price_rub: number;
 }): Promise<Receipt> {
   const body = {
     lessonId: payload.lesson_id,

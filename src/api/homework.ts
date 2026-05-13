@@ -66,6 +66,9 @@ export async function getAssignments(
  * POST /homework/assignments
  *
  * Request body uses camelCase per the OpenAPI spec.
+ * Note: fileId is technically optional -- the OpenAPI spec's `required` array
+ * references `file_id` (snake_case) which doesn't match the camelCase property
+ * name `fileId`, so the required constraint is a spec bug and does not apply.
  */
 export async function createAssignment(payload: {
   tutor_id: string;
@@ -145,6 +148,9 @@ export async function getSubmissions(assignmentId: string): Promise<Submission[]
  * POST /homework/submissions
  *
  * Request body uses camelCase.
+ * Note: fileId is technically optional -- the OpenAPI spec's `required` array
+ * references `file_id` (snake_case) which doesn't match the camelCase property
+ * name `fileId`, so the required constraint is a spec bug and does not apply.
  */
 export async function createSubmission(payload: {
   assignment_id: string;
@@ -188,6 +194,9 @@ export async function getFeedbacks(assignmentId?: string): Promise<Feedback[]> {
  * POST /homework/feedbacks
  *
  * Request body uses camelCase. The backend accepts an optional grade (1-5).
+ * Note: fileId is technically optional -- the OpenAPI spec's `required` array
+ * references `file_id` (snake_case) which doesn't match the camelCase property
+ * name `fileId`, so the required constraint is a spec bug and does not apply.
  */
 export async function createFeedback(payload: {
   submission_id: string;

@@ -10,6 +10,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
 import { apiClient } from '../api/client';
+import { toast } from 'sonner';
 import { formatDate, formatTime } from '../types';
 import type { Lesson, Slot, User, Receipt } from '../types';
 
@@ -81,6 +82,7 @@ export function Payments() {
         setItems(itemsWithMeta.filter((item) => item.slot !== null) as LessonWithMeta[]);
       } catch (err) {
         console.error('Failed to fetch payments data', err);
+        toast.error('Не удалось загрузить платежи');
       } finally {
         setLoading(false);
       }
