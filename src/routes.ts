@@ -105,4 +105,8 @@ export const router = createBrowserRouter([
     path: '/notifications',
     Component: Notifications,
   },
+  {
+    path: '*',
+    loader: () => redirect('/schedule'),
+  },
 ]);
