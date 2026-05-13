@@ -91,11 +91,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
                     ...userInfo,
                   });
                   setNeedsRegistration(true);
+                } else {
+                  setNeedsTelegram(true);
                 }
-                // If we can't even parse an id, fall through to needsTelegram
+              } else if (status === 401) {
+                // Invalid auth — clear cached initData and show needsTelegram
+                clearAuth();
+                setNeedsTelegram(true);
+              } else {
+                // Network or other error — show needsTelegram with debug
+                setNeedsTelegram(true);
               }
-              // 401 is handled by httpClient interceptor (redirects to /welcome)
-              // Other errors: stay on welcome page, no special action needed
             })
             .finally(() => {
               setIsInitializing(false);

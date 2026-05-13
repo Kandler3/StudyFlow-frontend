@@ -31,8 +31,8 @@ httpClient.interceptors.response.use(
   (error) => {
     if (error.response?.status === 401) {
       clearAuth();
-      toast.error('Сессия истекла. Войдите заново.');
-      window.location.href = '/welcome';
+      // Don't hard-redirect — let AppContext handle state gracefully
+      // AppContext will see the 401 in its getMe() catch and show needsTelegram
     } else if (!error.response) {
       const failedUrl = error.config?.url || 'unknown';
       console.error('Network error to:', failedUrl, '| baseURL:', httpClient.defaults.baseURL);
