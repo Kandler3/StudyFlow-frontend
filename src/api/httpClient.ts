@@ -34,7 +34,9 @@ httpClient.interceptors.response.use(
       toast.error('Сессия истекла. Войдите заново.');
       window.location.href = '/welcome';
     } else if (!error.response) {
-      toast.error('Ошибка сети. Проверьте подключение.');
+      const failedUrl = error.config?.url || 'unknown';
+      console.error('Network error to:', failedUrl, '| baseURL:', httpClient.defaults.baseURL);
+      toast.error(`Ошибка сети: ${failedUrl}`);
     } else if (error.response?.status >= 500) {
       toast.error('Ошибка сервера. Попробуйте позже.');
     }
