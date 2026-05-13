@@ -33,6 +33,8 @@ interface AppContextType {
   needsTelegram: boolean;
   telegramUserInfo: TelegramUserInfo | null;
   completeRegistration: (role: 'tutor' | 'student') => Promise<void>;
+  // Debug info for diagnosing auth failures
+  lastAuthError: string | null;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
@@ -44,6 +46,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [needsRegistration, setNeedsRegistration] = useState(false);
   const [needsTelegram, setNeedsTelegram] = useState(false);
   const [telegramUserInfo, setTelegramUserInfo] = useState<TelegramUserInfo | null>(null);
+  const [lastAuthError, setLastAuthError] = useState<string | null>(null);
 
   // ── Shared helper: set authUser and fetch tutor profile if needed ──
   const handleAuthSuccess = useCallback((user: User) => {
@@ -94,13 +97,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
                 } else {
                   setNeedsTelegram(true);
                 }
+                setLastAuthError(`404: user not registered (expected)`);
               } else if (status === 401) {
                 // Invalid auth — clear cached initData and show needsTelegram
                 clearAuth();
                 setNeedsTelegram(true);
+                const body = (error as { response?: { data?: unknown } }).response?.data;
+                setLastAuthError(`401: ${JSON.stringify(body) || 'no body'}`);
               } else {
                 // Network or other error — show needsTelegram with debug
                 setNeedsTelegram(true);
+                setLastAuthError(status ? `${status}` : 'Network/unknown');
               }
             })
             .finally(() => {
@@ -244,6 +251,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
         needsTelegram,
         telegramUserInfo,
         completeRegistration,
+        lastAuthError,
       }}
     >
       {children}

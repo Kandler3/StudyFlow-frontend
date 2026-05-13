@@ -16,7 +16,7 @@ export function Welcome() {
   const {
     loginAs, loginWithTelegramId, authUser,
     isInitializing, needsRegistration, needsTelegram,
-    telegramUserInfo, completeRegistration,
+    telegramUserInfo, completeRegistration, lastAuthError,
   } = useApp();
   const [telegramId, setTelegramId] = useState('');
   const [isLoggingIn, setIsLoggingIn] = useState(false);
@@ -209,7 +209,7 @@ export function Welcome() {
             </Card>
 
             {/* Debug panel — shows what the app actually sees */}
-            <DebugPanel />
+            <DebugPanel lastAuthError={lastAuthError} />
 
             {/* Dev login toggle */}
             {!showDevLogin ? (
@@ -256,7 +256,7 @@ export function Welcome() {
  * In-app debug panel — shows what the browser actually sees.
  * Critical for debugging Telegram Mini App issues where there's no DevTools.
  */
-function DebugPanel() {
+function DebugPanel({ lastAuthError }: { lastAuthError: string | null }) {
   const [expanded, setExpanded] = React.useState(false);
 
   const tg = (window as any).Telegram;
@@ -279,6 +279,7 @@ function DebugPanel() {
     ['WebApp.viewportHeight', String(webApp?.viewportHeight ?? 0)],
     ['WebApp.viewportStableHeight', String(webApp?.viewportStableHeight ?? 0)],
     ['WebApp.isExpanded', String(webApp?.isExpanded ?? false)],
+    ['Last Auth Error', lastAuthError ?? '(none)'],
   ];
 
   return (
