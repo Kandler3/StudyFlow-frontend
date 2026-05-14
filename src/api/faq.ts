@@ -21,7 +21,7 @@ export async function listFAQs(category?: string): Promise<FAQ[]> {
     params.category = category;
   }
   const response = await httpClient.get('/faqs', { params });
-  return (response.data as any[]).map(toFAQ);
+  return (response.data.faqs ?? []).map(toFAQ);
 }
 
 /**
@@ -31,7 +31,7 @@ export async function listFAQs(category?: string): Promise<FAQ[]> {
  */
 export async function listCategories(): Promise<string[]> {
   const response = await httpClient.get('/faqs/categories');
-  return response.data as string[];
+  return response.data.categories ?? [];
 }
 
 /**

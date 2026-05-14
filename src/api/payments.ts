@@ -52,7 +52,7 @@ export async function getReceipts(
   if (filters?.student_id) params.student_id = filters.student_id;
 
   const { data } = await httpClient.get('/payment/receipts', { params });
-  const items: any[] = data.receipts ?? data ?? [];
+  const items: any[] = data.receipts ?? [];
   return items.map(toReceipt);
 }
 
