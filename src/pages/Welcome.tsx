@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router';
 import {
   Calendar, ClipboardList, CreditCard, Settings,
@@ -209,7 +209,6 @@ export function Welcome() {
               </div>
             </Card>
 
-            {/* Debug panel — shows what the app actually sees */}
             <DebugPanel lastAuthError={lastAuthError} />
 
             {/* Dev login toggle */}
@@ -252,3 +251,4 @@ export function Welcome() {
     </div>
   );
 }
+

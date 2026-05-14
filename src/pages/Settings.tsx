@@ -191,7 +191,6 @@ export function Settings() {
           </div>
         </Card>
 
-        {/* Debug Info */}
         <DebugPanel lastAuthError={lastAuthError} />
       </div>
     </Layout>
