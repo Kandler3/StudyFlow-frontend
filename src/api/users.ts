@@ -99,14 +99,14 @@ export async function getTutorStudents(tutorId: string): Promise<TutorStudent[]>
   const { data } = await httpClient.get(
     `/users/tutor-students/by-tutor/${tutorId}`,
   );
-  return (data as any[]).map(toTutorStudent);
+  return (data.students ?? []).map(toTutorStudent);
 }
 
 export async function getStudentTutors(studentId: string): Promise<TutorStudent[]> {
   const { data } = await httpClient.get(
     `/users/tutor-students/by-student/${studentId}`,
   );
-  return (data as any[]).map(toTutorStudent);
+  return (data.tutors ?? []).map(toTutorStudent);
 }
 
 export async function getTutorStudent(

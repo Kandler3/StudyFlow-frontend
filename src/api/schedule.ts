@@ -76,7 +76,7 @@ export async function getTutorSlots(
   const { data } = await httpClient.get(`/schedule/slots/by-tutor/${tutorId}`, {
     params,
   });
-  return (data as any[]).map(toSlot);
+  return (data.slots ?? []).map(toSlot);
 }
 
 // ---------------------------------------------------------------------------
@@ -99,7 +99,7 @@ export async function getLessons(
   if (filters?.from !== undefined) params.from = filters.from;
   if (filters?.to !== undefined) params.to = filters.to;
   const { data } = await httpClient.get('/schedule/lessons', { params });
-  return (data as any[]).map(toLesson);
+  return (data.lessons ?? []).map(toLesson);
 }
 
 export async function createLesson(

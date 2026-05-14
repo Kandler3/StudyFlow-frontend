@@ -59,7 +59,7 @@ export async function getAssignments(
   if (filters?.status_filter) params.status_filter = filters.status_filter;
 
   const { data } = await httpClient.get('/homework/assignments', { params });
-  return (data as any[]).map(toAssignment);
+  return (data.assignments ?? []).map(toAssignment);
 }
 
 /**
@@ -141,7 +141,7 @@ export async function getSubmissions(assignmentId: string): Promise<Submission[]
   const { data } = await httpClient.get(
     `/homework/assignments/${assignmentId}/submissions`,
   );
-  return (data as any[]).map(toSubmission);
+  return (data.submissions ?? []).map(toSubmission);
 }
 
 /**
@@ -187,7 +187,7 @@ export async function getFeedbacks(assignmentId?: string): Promise<Feedback[]> {
   const { data } = await httpClient.get(
     `/homework/assignments/${assignmentId}/feedbacks`,
   );
-  return (data as any[]).map(toFeedback);
+  return (data.feedbacks ?? []).map(toFeedback);
 }
 
 /**

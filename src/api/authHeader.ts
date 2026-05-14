@@ -39,17 +39,25 @@ export function getInitData(): string | null {
   try {
     const tg = window.Telegram?.WebApp;
     if (tg?.initData) return tg.initData;
-    // Fallback: initDataUnsafe has the same data minus the hash
-    // This works for dev/test but should be replaced by real initData in production
-    if (tg?.initDataUnsafe) {
-      console.warn('Using initDataUnsafe — auth may fail on backend hash check');
-    }
+    // initDataUnsafe exists but without hash — only use as last resort
+    // when no dev fallback is configured
   } catch {
     // Not in Telegram context
   }
 
   const devInitData = import.meta.env.VITE_DEV_TELEGRAM_INIT_DATA as string | undefined;
   if (devInitData) return devInitData;
+
+  // Only use unsafe initData if no dev fallback is available
+  try {
+    const tg = window.Telegram?.WebApp;
+    if (tg?.initDataUnsafe) {
+      console.warn('Using initDataUnsafe — auth may fail on backend hash check');
+      return tg.initDataUnsafe;
+    }
+  } catch {
+    // ignore
+  }
 
   return null;
 }
