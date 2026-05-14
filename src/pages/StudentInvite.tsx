@@ -7,7 +7,7 @@ import { Button } from '../components/ui/button';
 import { useApp } from '../context/AppContext';
 import { toast } from 'sonner';
 
-const TG_BOT_LINK = 'https://t.me/StudyFlowBot';
+const TG_BOT_LINK = 'https://t.me/sstudyflowbot';
 
 export function StudentInvite() {
   const { authUser } = useApp();
