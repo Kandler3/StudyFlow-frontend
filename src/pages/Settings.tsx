@@ -5,11 +5,12 @@ import { Layout } from '../components/layout/Layout';
 import { Header } from '../components/layout/Header';
 import { Card } from '../components/ui/card';
 import { Badge } from '../components/ui/badge';
+import { DebugPanel } from '../components/DebugPanel';
 import { useApp } from '../context/AppContext';
 
 export function Settings() {
   const navigate = useNavigate();
-  const { authUser, loginAs, tutorProfile } = useApp();
+  const { authUser, loginAs, tutorProfile, lastAuthError } = useApp();
 
   const [lessonReminders, setLessonReminders] = useState(true);
   const [assignmentReminders, setAssignmentReminders] = useState(true);
@@ -189,6 +190,8 @@ export function Settings() {
             </div>
           </div>
         </Card>
+
+        <DebugPanel lastAuthError={lastAuthError} />
       </div>
     </Layout>
   );
