@@ -210,21 +210,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
     setTelegramUserInfo(null);
   }, []);
 
-  // Handle deep link invitations (simulated via ?start=invite_{tutor_id})
+  // Handle deep link invitations via Telegram startapp parameter
+  // Telegram passes startapp to Mini App via initDataUnsafe.start_param
   useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const startParam = params.get('start');
+    const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param as string | undefined;
     if (startParam && startParam.startsWith('invite_') && authUser) {
       const tutorId = startParam.replace('invite_', '');
       if (authUser.role === 'student') {
         apiClient.acceptInvitation(tutorId, authUser.id).then(() => {
-          toast('Приглашение принято!');
-          const url = new URL(window.location.href);
-          url.searchParams.delete('start');
-          window.history.replaceState({}, '', url.toString());
-        }).catch((err) => {
-          console.error('Failed to accept invitation', err);
-          toast('Не удалось принять приглашение');
+          toast.success('Приглашение принято!');
+        }).catch(() => {
+          toast.error('Не удалось принять приглашение');
         });
       }
     }
