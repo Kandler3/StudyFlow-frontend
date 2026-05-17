@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router';
-import { ArrowLeft, Plus, Upload, Calendar } from 'lucide-react';
+import { ArrowLeft, Plus, Upload, Calendar, Loader2, FileText, X } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Header } from '../components/layout/Header';
 import { Card } from '../components/ui/card';
@@ -22,10 +22,14 @@ export function AssignmentCreate() {
   const [selectedStudentId, setSelectedStudentId] = useState('');
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [fileName, setFileName] = useState('');
   const [dueDate, setDueDate] = useState('');
   const [dueTime, setDueTime] = useState('');
   const [submitting, setSubmitting] = useState(false);
+
+  // File upload state
+  const [selectedFile, setSelectedFile] = useState<File | null>(null);
+  const [uploading, setUploading] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   // Check if user is tutor
   if (authUser && authUser.role !== 'tutor') {
@@ -83,10 +87,13 @@ export function AssignmentCreate() {
     try {
       let fileId: string | undefined;
 
-      // Mock file upload: if filename entered, initUpload to get file_id
-      if (fileName.trim()) {
-        const uploadResult = await apiClient.initUpload(fileName.trim());
-        fileId = uploadResult.file_id;
+      if (selectedFile) {
+        setUploading(true);
+        const { file_id, upload_url } = await apiClient.initUpload(authUser.id, selectedFile.name);
+        await apiClient.uploadFile(upload_url, selectedFile);
+        await apiClient.confirmUpload(file_id);
+        fileId = file_id;
+        setUploading(false);
       }
 
       // Build ISO datetime from dueDate + dueTime
@@ -186,15 +193,30 @@ export function AssignmentCreate() {
               </div>
             </Card>
 
-            {/* File upload (simplified mock) */}
-            <Input
-              label="Прикрепить файл (необязательно)"
-              placeholder="Введите имя файла"
-              value={fileName}
-              onChange={(e) => setFileName(e.target.value)}
-              icon={<Upload className="w-4 h-4" />}
-              helperText="Введите имя файла для симуляции загрузки"
-            />
+            {/* File upload */}
+            <Card>
+              <div className="space-y-2">
+                <label className="block text-sm font-medium text-[var(--tg-theme-text-color,#000)]">
+                  Прикрепить файл (необязательно)
+                </label>
+                <input
+                  ref={fileInputRef}
+                  type="file"
+                  accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.mp3,.mp4,.wav,.zip,.rar"
+                  onChange={(e) => setSelectedFile(e.target.files?.[0] ?? null)}
+                  className="w-full text-sm text-[var(--tg-theme-text-color,#000)] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[var(--tg-theme-button-color,#3390ec)] file:text-white"
+                />
+                {selectedFile && (
+                  <div className="flex items-center gap-2 text-sm text-[var(--tg-theme-hint-color,#999)]">
+                    <FileText className="w-4 h-4" />
+                    <span>{selectedFile.name}</span>
+                    <button onClick={() => { setSelectedFile(null); if (fileInputRef.current) fileInputRef.current.value = ''; }}>
+                      <X className="w-4 h-4" />
+                    </button>
+                  </div>
+                )}
+              </div>
+            </Card>
 
             {/* Submit */}
             <Button
@@ -202,7 +224,13 @@ export function AssignmentCreate() {
               disabled={!isValid || submitting}
               onClick={handleSubmit}
             >
-              {submitting ? 'Создание...' : 'Создать задание'}
+              {uploading ? (
+                <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Загрузка файла...</>
+              ) : submitting ? (
+                'Создание...'
+              ) : (
+                'Создать задание'
+              )}
             </Button>
           </>
         )}

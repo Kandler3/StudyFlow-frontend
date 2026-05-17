@@ -71,10 +71,9 @@ function buildRealApi(): ApiClient {
 
     // Files
     initUpload: files.initUpload,
-    getFileMeta: files.getFileMeta,
-    getFileUrl: files.getFileUrl,
-    getFileDownloadUrl: files.getFileDownloadUrl,
+    uploadFile: files.uploadFile,
     confirmUpload: files.confirmUpload,
+    getFileMeta: files.getFileMeta,
 
     // Notifications — local only, use mock
     getNotifications: mockApi.getNotifications,

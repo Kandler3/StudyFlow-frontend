@@ -596,13 +596,26 @@ const paymentsApi: ApiPayments = {
 
 // ── Files ──
 const filesApi: ApiFiles = {
-  async initUpload(filename: string): Promise<{ file_id: string; upload_url: string }> {
+  async initUpload(_uploadedBy: string, filename: string): Promise<{ file_id: string; upload_url: string }> {
     await delay();
     const fileId = idGen2.next('file');
     return {
       file_id: fileId,
       upload_url: `https://mock-upload.example.com/${fileId}`,
     };
+  },
+
+  async uploadFile(_uploadUrl: string, _file: File): Promise<void> {
+    await delay();
+  },
+
+  async confirmUpload(fileId: string): Promise<FileInfo> {
+    await delay();
+    const meta = fileInfoMap.get(fileId);
+    if (!meta) throw new Error(`File ${fileId} not found`);
+    const confirmed = { ...meta, isUploaded: true };
+    fileInfoMap.set(fileId, confirmed);
+    return confirmed;
   },
 
   async getFileMeta(id: string): Promise<FileInfo> {
@@ -612,23 +625,6 @@ const filesApi: ApiFiles = {
     return { ...meta };
   },
 
-  getFileUrl(id: string): string {
-    return `/files/${id}?download=1`;
-  },
-
-  async getFileDownloadUrl(fileId: string): Promise<string> {
-    await delay();
-    const meta = fileInfoMap.get(fileId);
-    if (!meta) throw new Error(`File ${fileId} not found`);
-    return `/files/${fileId}?download=1`;
-  },
-
-  async confirmUpload(fileId: string): Promise<FileInfo> {
-    await delay();
-    const meta = fileInfoMap.get(fileId);
-    if (!meta) throw new Error(`File ${fileId} not found`);
-    return { ...meta };
-  },
 };
 
 // ── Notifications ──

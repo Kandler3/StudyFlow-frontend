@@ -1,12 +1,11 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { CreditCard, FileText, CheckCircle, Clock, XCircle, Upload, ShieldCheck, Download, Calendar, User as UserIcon, Info } from 'lucide-react';
+import { FileText, CheckCircle, Clock, XCircle, Upload, ShieldCheck, Download, Calendar, User as UserIcon, Info, Loader2, X } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Header } from '../components/layout/Header';
 import { Card } from '../components/ui/card';
 import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
-import { Input } from '../components/ui/input';
 import { Modal } from '../components/ui/Modal';
 import { LoadingSpinner } from '../components/ui/LoadingSpinner';
 import { useApp } from '../context/AppContext';
@@ -30,9 +29,10 @@ export function PaymentDetail() {
 
   // Submit receipt modal state
   const [showReceiptModal, setShowReceiptModal] = useState(false);
-  const [receiptPrice, setReceiptPrice] = useState(0);
-  const [receiptFileName, setReceiptFileName] = useState('');
+  const [receiptFile, setReceiptFile] = useState<File | null>(null);
+  const [receiptUploading, setReceiptUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const receiptFileRef = useRef<HTMLInputElement>(null);
 
   // Verify state
   const [verifying, setVerifying] = useState(false);
@@ -78,9 +78,6 @@ export function PaymentDetail() {
           setReceiptFileUrl(fileUrl);
         }
 
-        // Pre-fill price for receipt form
-        const priceValue = lessonData.price_rub ?? payInfoData?.price_rub ?? 0;
-        setReceiptPrice(priceValue);
       } catch (err) {
         console.error('Failed to fetch payment detail', err);
         setError('Платеж не найден');
@@ -100,24 +97,22 @@ export function PaymentDetail() {
     if (!id || !authUser || !lesson || !slot) return;
     setSubmitting(true);
     try {
-      let fileId: string;
-      if (receiptFileName.trim()) {
-        const uploadResult = await apiClient.initUpload(receiptFileName.trim());
-        fileId = uploadResult.file_id;
-      } else {
-        // Default file name if none provided
-        const uploadResult = await apiClient.initUpload('receipt.txt');
-        fileId = uploadResult.file_id;
-      }
+      if (!receiptFile) return;
+      setReceiptUploading(true);
+      const { file_id, upload_url } = await apiClient.initUpload(authUser.id, receiptFile.name);
+      await apiClient.uploadFile(upload_url, receiptFile);
+      await apiClient.confirmUpload(file_id);
+      setReceiptUploading(false);
 
       const newReceipt = await apiClient.submitReceipt({
         lesson_id: id,
-        file_id: fileId,
+        file_id,
       });
 
       setReceipts([newReceipt]);
       setShowReceiptModal(false);
-      setReceiptFileName('');
+      setReceiptFile(null);
+      if (receiptFileRef.current) receiptFileRef.current.value = '';
 
       // Fetch receipt file URL for the new receipt
       const fileUrl = await apiClient.getReceiptFileUrl(newReceipt.id).catch(() => null);
@@ -348,21 +343,30 @@ export function PaymentDetail() {
           <p className="text-sm text-[var(--tg-theme-hint-color,#999)]">
             Загрузите чек об оплате для подтверждения платежа
           </p>
-          <Input
-            label="Сумма оплаты"
-            type="number"
-            value={String(receiptPrice)}
-            onChange={(e) => setReceiptPrice(Number(e.target.value))}
-            icon={<CreditCard className="w-4 h-4" />}
-          />
-          <Input
-            label="Файл чека"
-            placeholder="Введите имя файла"
-            value={receiptFileName}
-            onChange={(e) => setReceiptFileName(e.target.value)}
-            icon={<Upload className="w-4 h-4" />}
-            helperText="Введите имя файла для симуляции загрузки"
-          />
+          <p className="text-sm text-[var(--tg-theme-text-color,#000)]">
+            Сумма оплаты: <strong>{lesson?.price_rub ?? paymentInfo?.price_rub ?? '—'} ₽</strong>
+          </p>
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-[var(--tg-theme-text-color,#000)]">
+              Файл чека
+            </label>
+            <input
+              ref={receiptFileRef}
+              type="file"
+              accept="image/*,.pdf"
+              onChange={(e) => setReceiptFile(e.target.files?.[0] ?? null)}
+              className="w-full text-sm text-[var(--tg-theme-text-color,#000)] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[var(--tg-theme-button-color,#3390ec)] file:text-white"
+            />
+            {receiptFile && (
+              <div className="flex items-center gap-2 text-sm text-[var(--tg-theme-hint-color,#999)]">
+                <FileText className="w-4 h-4" />
+                <span>{receiptFile.name}</span>
+                <button onClick={() => { setReceiptFile(null); if (receiptFileRef.current) receiptFileRef.current.value = ''; }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex gap-3 mt-4">
           <Button
@@ -374,10 +378,16 @@ export function PaymentDetail() {
           </Button>
           <Button
             fullWidth
-            disabled={submitting}
+            disabled={submitting || !receiptFile}
             onClick={handleSubmitReceipt}
           >
-            {submitting ? 'Загрузка...' : 'Отправить'}
+            {receiptUploading ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Загрузка файла...</>
+            ) : submitting ? (
+              'Отправка...'
+            ) : (
+              'Отправить'
+            )}
           </Button>
         </div>
       </Modal>

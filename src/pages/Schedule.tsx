@@ -285,7 +285,7 @@ export function Schedule() {
                   {formatScheduleDate(groupedLessons[dateKey]![0].slot.starts_at)}
                 </h3>
                 <div className="space-y-3">
-                  {groupedLessons[dateKey]!.map(({ lesson, slot, student }) => (
+                  {groupedLessons[dateKey]!.map(({ lesson, slot, student, tutor }) => (
                     <Card
                       key={lesson.id}
                       onClick={() => navigate(`/schedule/${lesson.id}`)}

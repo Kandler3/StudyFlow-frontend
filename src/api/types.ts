@@ -106,11 +106,10 @@ export interface ApiPayments {
 
 // ── Files ──
 export interface ApiFiles {
-  initUpload(filename: string): Promise<{ file_id: string; upload_url: string }>;
-  getFileMeta(id: string): Promise<FileInfo>;
-  getFileUrl(id: string): string;
-  getFileDownloadUrl(fileId: string): Promise<string>;
+  initUpload(uploadedBy: string, filename: string): Promise<{ file_id: string; upload_url: string }>;
+  uploadFile(uploadUrl: string, file: File): Promise<void>;
   confirmUpload(fileId: string): Promise<FileInfo>;
+  getFileMeta(id: string): Promise<FileInfo>;
 }
 
 // ── Notifications (local only) ──

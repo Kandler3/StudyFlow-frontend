@@ -1,6 +1,6 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router';
-import { Clock, User as UserIcon, FileText, Upload, MessageSquare, CheckCircle, AlertCircle, AlertTriangle, Download } from 'lucide-react';
+import { Clock, User as UserIcon, FileText, Upload, MessageSquare, CheckCircle, AlertCircle, AlertTriangle, Download, Loader2, X } from 'lucide-react';
 import { Layout } from '../components/layout/Layout';
 import { Header } from '../components/layout/Header';
 import { Card } from '../components/ui/card';
@@ -28,18 +28,27 @@ export function AssignmentDetail() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  // Pre-fetched download URLs
+  const [assignmentFileUrl, setAssignmentFileUrl] = useState<string | null>(null);
+  const [submissionFileUrl, setSubmissionFileUrl] = useState<string | null>(null);
+  const [feedbackFileUrl, setFeedbackFileUrl] = useState<string | null>(null);
+
   // Submit modal state
   const [showSubmitModal, setShowSubmitModal] = useState(false);
   const [submitComment, setSubmitComment] = useState('');
-  const [submitFileName, setSubmitFileName] = useState('');
+  const [submitFile, setSubmitFile] = useState<File | null>(null);
+  const [submitUploading, setSubmitUploading] = useState(false);
   const [submitSaving, setSubmitSaving] = useState(false);
+  const submitFileRef = useRef<HTMLInputElement>(null);
 
   // Review modal state
   const [showReviewModal, setShowReviewModal] = useState(false);
   const [reviewComment, setReviewComment] = useState('');
-  const [reviewFileName, setReviewFileName] = useState('');
+  const [reviewFile, setReviewFile] = useState<File | null>(null);
+  const [reviewUploading, setReviewUploading] = useState(false);
   const [reviewGrade, setReviewGrade] = useState<number | undefined>(undefined);
   const [reviewSaving, setReviewSaving] = useState(false);
+  const reviewFileRef = useRef<HTMLInputElement>(null);
 
   useEffect(() => {
     if (!id || !authUser) return;
@@ -70,6 +79,23 @@ export function AssignmentDetail() {
         ]);
         setSubmissions(subs);
         setFeedbacks(fbs);
+
+        // Pre-fetch download URLs
+        if (assignmentData.file_id) {
+          apiClient.getAssignmentFileUrl(currentId)
+            .then(setAssignmentFileUrl)
+            .catch(() => setAssignmentFileUrl(null));
+        }
+        if (subs[0]?.file_id) {
+          apiClient.getSubmissionFileUrl(subs[0].id)
+            .then(setSubmissionFileUrl)
+            .catch(() => setSubmissionFileUrl(null));
+        }
+        if (fbs[0]?.file_id) {
+          apiClient.getFeedbackFileUrl(fbs[0].id)
+            .then(setFeedbackFileUrl)
+            .catch(() => setFeedbackFileUrl(null));
+        }
       } catch (err) {
         console.error('Failed to fetch assignment', err);
         setError('Задание не найдено');
@@ -96,9 +122,13 @@ export function AssignmentDetail() {
     setSubmitSaving(true);
     try {
       let fileId: string | undefined;
-      if (submitFileName.trim()) {
-        const uploadResult = await apiClient.initUpload(submitFileName.trim());
-        fileId = uploadResult.file_id;
+      if (submitFile) {
+        setSubmitUploading(true);
+        const { file_id, upload_url } = await apiClient.initUpload(authUser!.id, submitFile.name);
+        await apiClient.uploadFile(upload_url, submitFile);
+        await apiClient.confirmUpload(file_id);
+        fileId = file_id;
+        setSubmitUploading(false);
       }
 
       const newSub = await apiClient.createSubmission({
@@ -110,7 +140,15 @@ export function AssignmentDetail() {
       setSubmissions([newSub]);
       setShowSubmitModal(false);
       setSubmitComment('');
-      setSubmitFileName('');
+      setSubmitFile(null);
+      if (submitFileRef.current) submitFileRef.current.value = '';
+
+      // Refresh submission download URL
+      if (newSub.file_id) {
+        apiClient.getSubmissionFileUrl(newSub.id)
+          .then(setSubmissionFileUrl)
+          .catch(() => setSubmissionFileUrl(null));
+      }
 
       // Refetch feedbacks (should be none, but ensure consistency)
       const fbs = await apiClient.getFeedbacks(id);
@@ -129,9 +167,13 @@ export function AssignmentDetail() {
     setReviewSaving(true);
     try {
       let fileId: string | undefined;
-      if (reviewFileName.trim()) {
-        const uploadResult = await apiClient.initUpload(reviewFileName.trim());
-        fileId = uploadResult.file_id;
+      if (reviewFile) {
+        setReviewUploading(true);
+        const { file_id, upload_url } = await apiClient.initUpload(authUser!.id, reviewFile.name);
+        await apiClient.uploadFile(upload_url, reviewFile);
+        await apiClient.confirmUpload(file_id);
+        fileId = file_id;
+        setReviewUploading(false);
       }
 
       const newFb = await apiClient.createFeedback({
@@ -144,8 +186,16 @@ export function AssignmentDetail() {
       setFeedbacks([newFb]);
       setShowReviewModal(false);
       setReviewComment('');
-      setReviewFileName('');
+      setReviewFile(null);
       setReviewGrade(undefined);
+      if (reviewFileRef.current) reviewFileRef.current.value = '';
+
+      // Refresh feedback download URL
+      if (newFb.file_id) {
+        apiClient.getFeedbackFileUrl(newFb.id)
+          .then(setFeedbackFileUrl)
+          .catch(() => setFeedbackFileUrl(null));
+      }
     } catch (err) {
       console.error('Failed to create feedback', err);
       toast.error('Не удалось отправить отзыв');
@@ -159,9 +209,13 @@ export function AssignmentDetail() {
     setReviewSaving(true);
     try {
       let fileId: string | undefined;
-      if (reviewFileName.trim()) {
-        const uploadResult = await apiClient.initUpload(reviewFileName.trim());
-        fileId = uploadResult.file_id;
+      if (reviewFile) {
+        setReviewUploading(true);
+        const { file_id, upload_url } = await apiClient.initUpload(authUser!.id, reviewFile.name);
+        await apiClient.uploadFile(upload_url, reviewFile);
+        await apiClient.confirmUpload(file_id);
+        fileId = file_id;
+        setReviewUploading(false);
       }
 
       const updated = await apiClient.updateFeedback(currentFeedback.id, {
@@ -173,8 +227,16 @@ export function AssignmentDetail() {
       setFeedbacks([updated]);
       setShowReviewModal(false);
       setReviewComment('');
-      setReviewFileName('');
+      setReviewFile(null);
       setReviewGrade(undefined);
+      if (reviewFileRef.current) reviewFileRef.current.value = '';
+
+      // Refresh feedback download URL
+      if (updated.file_id) {
+        apiClient.getFeedbackFileUrl(updated.id)
+          .then(setFeedbackFileUrl)
+          .catch(() => setFeedbackFileUrl(null));
+      }
     } catch (err) {
       console.error('Failed to update feedback', err);
       toast.error('Не удалось обновить отзыв');
@@ -185,7 +247,7 @@ export function AssignmentDetail() {
 
   const openReviewModal = () => {
     setReviewComment(currentFeedback?.comment || '');
-    setReviewFileName('');
+    setReviewFile(null);
     setReviewGrade(currentFeedback?.grade || undefined);
     setShowReviewModal(true);
   };
@@ -288,7 +350,7 @@ export function AssignmentDetail() {
           <Card>
             <h3 className="font-semibold mb-3">Прикрепленный файл</h3>
             <a
-              href={apiClient.getFileUrl(assignment.file_id)}
+              href={assignmentFileUrl ?? '#'}
               download
               className="flex items-center gap-3 p-3 bg-[var(--tg-theme-secondary-bg-color,#f4f4f5)] rounded-xl"
               onClick={(e) => e.stopPropagation()}
@@ -323,7 +385,7 @@ export function AssignmentDetail() {
 
             {currentSubmission.file_id && (
               <a
-                href={apiClient.getFileUrl(currentSubmission.file_id)}
+                href={submissionFileUrl ?? '#'}
                 download
                 className="flex items-center gap-3 p-3 bg-[var(--tg-theme-secondary-bg-color,#f4f4f5)] rounded-xl"
                 onClick={(e) => e.stopPropagation()}
@@ -363,7 +425,7 @@ export function AssignmentDetail() {
 
             {currentFeedback.file_id && (
               <a
-                href={apiClient.getFileUrl(currentFeedback.file_id)}
+                href={feedbackFileUrl ?? '#'}
                 download
                 className="flex items-center gap-3 p-3 bg-[var(--tg-theme-secondary-bg-color,#f4f4f5)] rounded-xl"
                 onClick={(e) => e.stopPropagation()}
@@ -423,14 +485,27 @@ export function AssignmentDetail() {
             rows={4}
             placeholder="Опишите решение или добавьте комментарии..."
           />
-          <Input
-            label="Прикрепить файл (необязательно)"
-            placeholder="Введите имя файла"
-            value={submitFileName}
-            onChange={(e) => setSubmitFileName(e.target.value)}
-            icon={<Upload className="w-4 h-4" />}
-            helperText="Введите имя файла для симуляции загрузки"
-          />
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-[var(--tg-theme-text-color,#000)]">
+              Прикрепить файл (необязательно)
+            </label>
+            <input
+              ref={submitFileRef}
+              type="file"
+              accept=".jpg,.jpeg,.png,.gif,.webp,.pdf,.doc,.docx,.xls,.xlsx,.ppt,.pptx,.txt,.csv,.mp3,.mp4,.wav,.zip,.rar"
+              onChange={(e) => setSubmitFile(e.target.files?.[0] ?? null)}
+              className="w-full text-sm text-[var(--tg-theme-text-color,#000)] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[var(--tg-theme-button-color,#3390ec)] file:text-white"
+            />
+            {submitFile && (
+              <div className="flex items-center gap-2 text-sm text-[var(--tg-theme-hint-color,#999)]">
+                <FileText className="w-4 h-4" />
+                <span>{submitFile.name}</span>
+                <button onClick={() => { setSubmitFile(null); if (submitFileRef.current) submitFileRef.current.value = ''; }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex gap-3 mt-4">
           <Button
@@ -442,10 +517,16 @@ export function AssignmentDetail() {
           </Button>
           <Button
             fullWidth
-            disabled={submitSaving}
+            disabled={submitSaving || submitUploading}
             onClick={handleSubmitAssignment}
           >
-            {submitSaving ? 'Отправка...' : 'Отправить'}
+            {submitUploading ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Загрузка...</>
+            ) : submitSaving ? (
+              'Отправка...'
+            ) : (
+              'Отправить'
+            )}
           </Button>
         </div>
       </Modal>
@@ -488,14 +569,26 @@ export function AssignmentDetail() {
             </div>
           </div>
 
-          <Input
-            label="Прикрепить файл (необязательно)"
-            placeholder="Введите имя файла"
-            value={reviewFileName}
-            onChange={(e) => setReviewFileName(e.target.value)}
-            icon={<Upload className="w-4 h-4" />}
-            helperText="Введите имя файла для симуляции загрузки"
-          />
+          <div className="space-y-1">
+            <label className="block text-sm font-medium text-[var(--tg-theme-text-color,#000)]">
+              Прикрепить файл (необязательно)
+            </label>
+            <input
+              ref={reviewFileRef}
+              type="file"
+              onChange={(e) => setReviewFile(e.target.files?.[0] ?? null)}
+              className="w-full text-sm text-[var(--tg-theme-text-color,#000)] file:mr-3 file:py-2 file:px-4 file:rounded-lg file:border-0 file:text-sm file:font-medium file:bg-[var(--tg-theme-button-color,#3390ec)] file:text-white"
+            />
+            {reviewFile && (
+              <div className="flex items-center gap-2 text-sm text-[var(--tg-theme-hint-color,#999)]">
+                <FileText className="w-4 h-4" />
+                <span>{reviewFile.name}</span>
+                <button onClick={() => { setReviewFile(null); if (reviewFileRef.current) reviewFileRef.current.value = ''; }}>
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            )}
+          </div>
         </div>
         <div className="flex gap-3 mt-4">
           <Button
@@ -507,10 +600,18 @@ export function AssignmentDetail() {
           </Button>
           <Button
             fullWidth
-            disabled={reviewSaving}
+            disabled={reviewSaving || reviewUploading}
             onClick={currentFeedback ? handleUpdateFeedback : handleReview}
           >
-            {reviewSaving ? 'Сохранение...' : currentFeedback ? 'Сохранить' : 'Отправить'}
+            {reviewUploading ? (
+              <><Loader2 className="w-4 h-4 mr-2 animate-spin" /> Загрузка...</>
+            ) : reviewSaving ? (
+              'Сохранение...'
+            ) : currentFeedback ? (
+              'Сохранить'
+            ) : (
+              'Отправить'
+            )}
           </Button>
         </div>
       </Modal>
