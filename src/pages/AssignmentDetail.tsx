@@ -22,6 +22,7 @@ export function AssignmentDetail() {
 
   const [assignment, setAssignment] = useState<Assignment | null>(null);
   const [student, setStudent] = useState<User | null>(null);
+  const [tutor, setTutor] = useState<User | null>(null);
   const [submissions, setSubmissions] = useState<Submission[]>([]);
   const [feedbacks, setFeedbacks] = useState<Feedback[]>([]);
   const [loading, setLoading] = useState(true);
@@ -48,11 +49,20 @@ export function AssignmentDetail() {
       setLoading(true);
       setError(null);
       try {
-        const assignmentData = await apiClient.getAssignment(currentId);
+        const assignmentData = await apiClient.getAssignment(currentId, {
+          role: authUser!.role,
+          userId: authUser!.id,
+        });
         setAssignment(assignmentData);
 
-        const studentData = await apiClient.getUser(assignmentData.student_id);
-        setStudent(studentData);
+        // Fetch both student and tutor — don't break page if one fails
+        apiClient.getUser(assignmentData.student_id)
+          .then(setStudent)
+          .catch(() => setStudent(null));
+
+        apiClient.getUser(assignmentData.tutor_id)
+          .then(setTutor)
+          .catch(() => setTutor(null));
 
         const [subs, fbs] = await Promise.all([
           apiClient.getSubmissions(currentId),
@@ -203,7 +213,7 @@ export function AssignmentDetail() {
   }
 
   // Error / Not found state
-  if (error || !assignment || !student) {
+  if (error || !assignment) {
     return (
       <Layout hideNav>
         <Header title="Задание не найдено" showBack />
@@ -247,7 +257,7 @@ export function AssignmentDetail() {
                 </div>
               </div>
 
-              {/* Student name */}
+              {/* Second party — who the viewer is interacting with */}
               <div className="flex items-center gap-3">
                 <UserIcon className="w-5 h-5 text-[var(--tg-theme-hint-color,#999)]" />
                 <div>
@@ -255,7 +265,9 @@ export function AssignmentDetail() {
                     {isTutor ? 'Ученик' : 'Преподаватель'}
                   </div>
                   <div className="font-medium">
-                    {student.first_name} {student.last_name}
+                    {isTutor
+                      ? (student ? `${student.first_name} ${student.last_name}`.trim() || '—' : '...')
+                      : (tutor ? `${tutor.first_name} ${tutor.last_name}`.trim() || '—' : '...')}
                   </div>
                 </div>
               </div>

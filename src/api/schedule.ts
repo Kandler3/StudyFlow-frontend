@@ -71,12 +71,9 @@ export async function getTutorSlots(
   tutorId: string,
   onlyAvailable?: boolean,
 ): Promise<Slot[]> {
-  const params: Record<string, string | boolean> = {};
-  if (onlyAvailable !== undefined) params.only_available = onlyAvailable;
-  const { data } = await httpClient.get(`/schedule/slots/by-tutor/${tutorId}`, {
-    params,
-  });
-  return (data.slots ?? []).map(toSlot);
+  const { data } = await httpClient.get(`/schedule/slots/by-tutor/${tutorId}`);
+  const slots: Slot[] = (data.slots ?? []).map(toSlot);
+  return onlyAvailable ? slots.filter(s => !s.is_booked) : slots;
 }
 
 // ---------------------------------------------------------------------------

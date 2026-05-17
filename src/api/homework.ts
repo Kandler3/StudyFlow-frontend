@@ -93,10 +93,16 @@ export async function createAssignment(payload: {
 
 /**
  * There is no GET /homework/assignments/{id} endpoint in the OpenAPI spec.
- * Fetch all assignments and filter locally by id.
+ * Backend requires tutor_id or student_id filter — fetch with the right scope.
  */
-export async function getAssignment(id: string): Promise<Assignment> {
-  const assignments = await getAssignments({});
+export async function getAssignment(
+  id: string,
+  scope: { role: 'tutor' | 'student'; userId: string },
+): Promise<Assignment> {
+  const filters = scope.role === 'tutor'
+    ? { tutor_id: scope.userId }
+    : { student_id: scope.userId };
+  const assignments = await getAssignments(filters);
   const assignment = assignments.find((a) => a.id === id);
   if (!assignment) throw new Error(`Assignment ${id} not found`);
   return assignment;

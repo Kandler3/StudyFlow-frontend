@@ -17,6 +17,7 @@ interface LessonWithMeta {
   lesson: Lesson;
   slot: Slot;
   student?: User;
+  tutor?: User;
 }
 
 function getDurationMinutes(startsAt: string, endsAt: string): number {
@@ -85,7 +86,8 @@ export function Schedule() {
         const lessonsWithData = await Promise.all(
           lessonData.map(async (lesson) => {
             const slot = await apiClient.getSlot(lesson.slot_id);
-            return { lesson, slot };
+            const tutor = await apiClient.getUser(slot.tutor_id).catch(() => undefined);
+            return { lesson, slot, tutor };
           })
         );
         setLessons(lessonsWithData);
@@ -299,6 +301,12 @@ export function Schedule() {
                               <div className="flex items-center gap-2 text-sm text-[var(--tg-theme-text-color,#000)]">
                                 <Users className="w-4 h-4 text-[var(--tg-theme-hint-color,#999)]" />
                                 {student.first_name} {student.last_name}
+                              </div>
+                            )}
+                            {authUser.role === 'student' && tutor && (
+                              <div className="flex items-center gap-2 text-sm text-[var(--tg-theme-text-color,#000)]">
+                                <Users className="w-4 h-4 text-[var(--tg-theme-hint-color,#999)]" />
+                                {tutor.first_name} {tutor.last_name}
                               </div>
                             )}
                           </div>

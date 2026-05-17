@@ -67,7 +67,7 @@ export interface ApiHomework {
    * The field is effectively optional.
    */
   createAssignment(payload: { tutor_id: string; student_id: string; title: string; description: string; file_id?: string; due_date: string }): Promise<Assignment>;
-  getAssignment(id: string): Promise<Assignment>;
+  getAssignment(id: string, scope: { role: 'tutor' | 'student'; userId: string }): Promise<Assignment>;
   updateAssignment(id: string, fields: Partial<Pick<Assignment, 'title' | 'description' | 'file_id' | 'due_date'>>): Promise<Assignment>;
   deleteAssignment(id: string): Promise<void>;
   getSubmissions(assignmentId: string): Promise<Submission[]>;

@@ -419,7 +419,7 @@ const homeworkApi: ApiHomework = {
     return { ...assignment };
   },
 
-  async getAssignment(id: string): Promise<Assignment> {
+  async getAssignment(id: string, _scope?: { role: 'tutor' | 'student'; userId: string }): Promise<Assignment> {
     await delay();
     const assignment = assignmentMap.get(id);
     if (!assignment) throw new Error(`Assignment ${id} not found`);

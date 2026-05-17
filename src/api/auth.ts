@@ -4,12 +4,16 @@ import type { SignUpTelegramPayload } from './types';
 
 /**
  * Normalize backend response to match frontend User type.
- * Go may serialize int64 IDs as numbers — convert to string.
+ * Backend returns camelCase (Go), frontend uses snake_case.
  */
 function toUser(data: Record<string, unknown>): User {
   return {
-    ...(data as unknown as User),
     id: typeof data.id === 'number' ? String(data.id) : (data.id as string),
+    role: (data.role as User['role']) || 'student',
+    first_name: (data.firstName as string) ?? (data.first_name as string) ?? '',
+    last_name: (data.lastName as string) ?? (data.last_name as string) ?? '',
+    timezone: (data.timezone as string) ?? '',
+    status: (data.status as User['status']) ?? 'active',
   };
 }
 
