@@ -189,20 +189,20 @@ function toInvitation(data: any): Invitation {
 }
 
 export async function createInvitation(): Promise<Invitation> {
-  const { data } = await httpClient.post('/users/invitations');
+  const { data } = await httpClient.post('/users/users/invitations');
   return toInvitation(data);
 }
 
 export async function listInvitations(): Promise<Invitation[]> {
-  const { data } = await httpClient.get('/users/invitations');
+  const { data } = await httpClient.get('/users/users/invitations');
   return (data.invitations ?? []).map(toInvitation);
 }
 
 export async function revokeInvitation(id: string): Promise<void> {
-  await httpClient.delete(`/users/invitations/${id}`);
+  await httpClient.delete(`/users/users/invitations/${id}`);
 }
 
 export async function acceptInvitationByToken(token: string): Promise<TutorStudent> {
-  const { data } = await httpClient.post(`/users/invitations/${token}/accept`);
+  const { data } = await httpClient.post(`/users/users/invitations/${token}/accept`);
   return toTutorStudent(data);
 }

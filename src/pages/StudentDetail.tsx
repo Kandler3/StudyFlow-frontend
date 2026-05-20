@@ -40,39 +40,49 @@ export function StudentDetail() {
     setLoading(true);
     setError(null);
     try {
+      // Load user and relationship first — if these fail, show "not found"
       const [userData] = await Promise.all([
         apiClient.getUser(studentId),
       ]);
       setUser(userData);
 
-      // Fetch relationship based on role
       let rel: TutorStudent | undefined;
-      if (authUser.role === 'tutor') {
-        rel = await apiClient.getTutorStudent(authUser.id, studentId);
-      } else {
-        const tutors = await apiClient.getStudentTutors(authUser.id);
-        rel = tutors.find((t) => t.tutor_id === studentId);
+      try {
+        if (authUser.role === 'tutor') {
+          rel = await apiClient.getTutorStudent(authUser.id, studentId);
+        } else {
+          const tutors = await apiClient.getStudentTutors(authUser.id);
+          rel = tutors.find((t) => t.tutor_id === studentId);
+        }
+      } catch {
+        // relationship is optional — leave as null
       }
       setRelationship(rel ?? null);
 
-      // Fetch lessons, assignments, receipts in parallel
-      const [lessonData, assignmentData, receiptData] = await Promise.all([
-        apiClient.getLessons({ student_id: studentId }),
-        apiClient.getAssignments({ student_id: studentId }),
-        apiClient.getReceipts({ student_id: studentId }),
-      ]);
+      // Load lessons, assignments, receipts — failures here are non-critical
+      try {
+        const [lessonData, assignmentData, receiptData] = await Promise.all([
+          apiClient.getLessons({ student_id: studentId }),
+          apiClient.getAssignments({ student_id: studentId }),
+          apiClient.getReceipts({ student_id: studentId }),
+        ]);
 
-      setAssignments(assignmentData);
-      setReceipts(receiptData);
+        setAssignments(assignmentData);
+        setReceipts(receiptData);
 
-      // Enrich lessons with slot data
-      const lessonsWithSlots = await Promise.all(
-        lessonData.map(async (lesson) => {
-          const slot = await apiClient.getSlot(lesson.slot_id);
-          return { lesson, slot };
-        })
-      );
-      setLessons(lessonsWithSlots);
+        const lessonsWithSlots: LessonWithSlot[] = [];
+        for (const lesson of lessonData) {
+          try {
+            const slot = await apiClient.getSlot(lesson.slot_id);
+            lessonsWithSlots.push({ lesson, slot });
+          } catch {
+            // skip this lesson if slot can't be loaded
+          }
+        }
+        setLessons(lessonsWithSlots);
+      } catch {
+        // non-critical — leave empty arrays
+      }
     } catch (err) {
       console.error('Failed to fetch student detail', err);
       setError('Не удалось загрузить данные ученика');
