@@ -26,6 +26,16 @@ export interface TutorStudent {
   lesson_connection_link?: string;
 }
 
+// Invitation — matches GET /users/invitations response
+export interface Invitation {
+  id: string;
+  tutor_id: string;
+  token: string;
+  status: 'active' | 'used' | 'revoked';
+  created_at: string;
+  edited_at?: string;
+}
+
 // Slot — matches schedule slots
 export interface Slot {
   id: string;

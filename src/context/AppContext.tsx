@@ -215,9 +215,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const startParam = window.Telegram?.WebApp?.initDataUnsafe?.start_param as string | undefined;
     if (startParam && startParam.startsWith('invite_') && authUser) {
-      const tutorId = startParam.replace('invite_', '');
+      const token = startParam.replace('invite_', '');
       if (authUser.role === 'student') {
-        apiClient.acceptInvitation(tutorId, authUser.id).then(() => {
+        apiClient.acceptInvitationByToken(token).then(() => {
           toast.success('Приглашение принято!');
         }).catch(() => {
           toast.error('Не удалось принять приглашение');

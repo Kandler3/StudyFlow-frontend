@@ -1,5 +1,5 @@
 import type {
-  User, TutorProfile, TutorStudent, Slot, Lesson,
+  User, TutorProfile, TutorStudent, Invitation, Slot, Lesson,
   Assignment, Submission, Feedback, Receipt, PaymentInfo,
   FileInfo, Notification, FAQ,
 } from '../types';
@@ -32,7 +32,6 @@ export interface ApiTutorStudents {
   getStudentTutors(studentId: string): Promise<TutorStudent[]>;
   getTutorStudent(tutorId: string, studentId: string): Promise<TutorStudent | undefined>;
   createTutorStudent(payload: { tutor_id: string; student_id: string; lesson_price_rub?: number; lesson_connection_link?: string }): Promise<TutorStudent>;
-  acceptInvitation(tutorId: string, studentId: string): Promise<TutorStudent>;
   updateTutorStudent(tutorId: string, studentId: string, fields: Partial<Pick<TutorStudent, 'lesson_price_rub' | 'lesson_connection_link' | 'status'>>): Promise<TutorStudent>;
   deleteTutorStudent(tutorId: string, studentId: string): Promise<void>;
 }
@@ -119,6 +118,14 @@ export interface ApiNotifications {
   markAllRead(): Promise<void>;
 }
 
+// ── Invitations ──
+export interface ApiInvitations {
+  createInvitation(): Promise<Invitation>;
+  listInvitations(): Promise<Invitation[]>;
+  revokeInvitation(id: string): Promise<void>;
+  acceptInvitationByToken(token: string): Promise<TutorStudent>;
+}
+
 // ── FAQ ──
 export interface ApiFAQ {
   listFAQs(category?: string): Promise<FAQ[]>;
@@ -127,4 +134,4 @@ export interface ApiFAQ {
 }
 
 // Combined API interface
-export interface ApiClient extends ApiAuth, ApiUsers, ApiTutorStudents, ApiSlots, ApiLessons, ApiHomework, ApiPayments, ApiFiles, ApiNotifications, ApiFAQ {}
+export interface ApiClient extends ApiAuth, ApiUsers, ApiTutorStudents, ApiInvitations, ApiSlots, ApiLessons, ApiHomework, ApiPayments, ApiFiles, ApiNotifications, ApiFAQ {}

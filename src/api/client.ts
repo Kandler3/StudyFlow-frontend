@@ -27,9 +27,14 @@ function buildRealApi(): ApiClient {
     getStudentTutors: users.getStudentTutors,
     getTutorStudent: users.getTutorStudent,
     createTutorStudent: users.createTutorStudent,
-    acceptInvitation: users.acceptInvitation,
     updateTutorStudent: users.updateTutorStudent,
     deleteTutorStudent: users.deleteTutorStudent,
+
+    // Invitations (token-based scheme)
+    createInvitation: users.createInvitation,
+    listInvitations: users.listInvitations,
+    revokeInvitation: users.revokeInvitation,
+    acceptInvitationByToken: users.acceptInvitationByToken,
 
     // Slots
     createSlot: schedule.createSlot,

@@ -29,7 +29,7 @@ const Input = React.forwardRef<HTMLInputElement, InputProps>(
         )}
         <div className="relative">
           {icon && (
-            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-[var(--tg-theme-hint-color,#999)] pointer-events-none">
+            <span className="absolute left-3 top-1/2 -translate-y-1/2 text-white pointer-events-none">
               {icon}
             </span>
           )}

@@ -1,5 +1,5 @@
 import httpClient from './httpClient';
-import type { User, TutorProfile, TutorStudent } from '../types';
+import type { User, TutorProfile, TutorStudent, Invitation } from '../types';
 
 // ---------------------------------------------------------------------------
 // Mapping helpers — backend and frontend live on different planets
@@ -144,19 +144,6 @@ export async function createTutorStudent(payload: {
   return toTutorStudent(data);
 }
 
-// The endpoint is /users/tutor-students/{tutor_id}/accept — the student is
-// inferred from the auth token, so studentId is accepted by the function
-// signature but not sent to the backend.
-export async function acceptInvitation(
-  tutorId: string,
-  _studentId: string,
-): Promise<TutorStudent> {
-  const { data } = await httpClient.post(
-    `/users/tutor-students/${tutorId}/accept`,
-  );
-  return toTutorStudent(data);
-}
-
 export async function updateTutorStudent(
   tutorId: string,
   studentId: string,
@@ -184,4 +171,38 @@ export async function deleteTutorStudent(
   studentId: string,
 ): Promise<void> {
   await httpClient.delete(`/users/tutor-students/${tutorId}/${studentId}`);
+}
+
+// ---------------------------------------------------------------------------
+// Invitation endpoints (token-based scheme)
+// ---------------------------------------------------------------------------
+
+function toInvitation(data: any): Invitation {
+  return {
+    id: String(data.id),
+    token: data.token,
+    tutor_id: String(data.tutorId ?? data.tutor_id),
+    status: data.status,
+    created_at: data.createdAt ?? data.created_at,
+    edited_at: data.editedAt ?? data.edited_at,
+  };
+}
+
+export async function createInvitation(): Promise<Invitation> {
+  const { data } = await httpClient.post('/users/invitations');
+  return toInvitation(data);
+}
+
+export async function listInvitations(): Promise<Invitation[]> {
+  const { data } = await httpClient.get('/users/invitations');
+  return (data.invitations ?? []).map(toInvitation);
+}
+
+export async function revokeInvitation(id: string): Promise<void> {
+  await httpClient.delete(`/users/invitations/${id}`);
+}
+
+export async function acceptInvitationByToken(token: string): Promise<TutorStudent> {
+  const { data } = await httpClient.post(`/users/invitations/${token}/accept`);
+  return toTutorStudent(data);
 }

@@ -1,5 +1,5 @@
 import type {
-  User, TutorProfile, TutorStudent, Slot, Lesson,
+  User, TutorProfile, TutorStudent, Invitation, Slot, Lesson,
   Assignment, Submission, Feedback, Receipt, PaymentInfo,
   FileInfo, Notification, FAQ,
 } from '../types';
@@ -17,6 +17,7 @@ import type {
   ApiFiles,
   ApiNotifications,
   ApiFAQ,
+  ApiInvitations,
   ApiClient,
 } from './types';
 
@@ -55,6 +56,7 @@ const feedbackMap = new Map<string, Feedback>();
 const receiptMap = new Map<string, Receipt>();
 const paymentInfoMap = new Map<string, PaymentInfo>();
 const fileInfoMap = new Map<string, FileInfo>();
+const invitationMap = new Map<string, Invitation>();
 const notificationMap = new Map<string, Notification>();
 
 // ── Helper: composite key for tutor-student relationships ──
@@ -87,6 +89,7 @@ idGen2.seed('r', Array.from(receiptMap.keys()));
 idGen2.seed('file', Array.from(fileInfoMap.keys()));
 idGen2.seed('n', Array.from(notificationMap.keys()));
 idGen2.seed('slot', Array.from(slotMap.keys()));
+idGen2.seed('inv', Array.from(invitationMap.keys()));
 idGen2.seed('u', Array.from(userMap.keys()));
 
 // ── Auth ──
@@ -185,16 +188,6 @@ const tutorStudentsApi: ApiTutorStudents = {
     };
     tutorStudentMap.set(tsKey(relation.tutor_id, relation.student_id), relation);
     return { ...relation };
-  },
-
-  async acceptInvitation(tutorId: string, studentId: string): Promise<TutorStudent> {
-    await delay();
-    const key = tsKey(tutorId, studentId);
-    const existing = tutorStudentMap.get(key);
-    if (!existing) throw new Error(`TutorStudent relationship not found for ${key}`);
-    const updated: TutorStudent = { ...existing, status: 'active' };
-    tutorStudentMap.set(key, updated);
-    return { ...updated };
   },
 
   async updateTutorStudent(
@@ -652,6 +645,61 @@ const notificationsApi: ApiNotifications = {
   },
 };
 
+// ── Invitations ──
+const invitationsApi: ApiInvitations = {
+  async createInvitation(): Promise<Invitation> {
+    await delay();
+    const now = new Date().toISOString();
+    const token = idGen2.next('tok');
+    const invitation: Invitation = {
+      id: idGen2.next('inv'),
+      tutor_id: mockData.currentUser.id,
+      token,
+      status: 'active',
+      created_at: now,
+      edited_at: now,
+    };
+    invitationMap.set(invitation.id, invitation);
+    return { ...invitation };
+  },
+
+  async listInvitations(): Promise<Invitation[]> {
+    await delay();
+    return Array.from(invitationMap.values())
+      .filter((inv) => inv.tutor_id === mockData.currentUser.id)
+      .map((inv) => ({ ...inv }))
+      .sort((a, b) => new Date(b.created_at).getTime() - new Date(a.created_at).getTime());
+  },
+
+  async revokeInvitation(id: string): Promise<void> {
+    await delay();
+    const existing = invitationMap.get(id);
+    if (!existing) throw new Error(`Invitation ${id} not found`);
+    invitationMap.set(id, { ...existing, status: 'revoked', edited_at: new Date().toISOString() });
+  },
+
+  async acceptInvitationByToken(token: string): Promise<TutorStudent> {
+    await delay();
+    const invitation = Array.from(invitationMap.values()).find((inv) => inv.token === token);
+    if (!invitation) throw new Error(`Invitation with token ${token} not found`);
+    if (invitation.status !== 'active') throw new Error(`Invitation is not active (${invitation.status})`);
+
+    // Create tutor-student relationship
+    const studentId = mockData.currentUser.id;
+    const relation: TutorStudent = {
+      tutor_id: invitation.tutor_id,
+      student_id: studentId,
+      status: 'active',
+    };
+    tutorStudentMap.set(tsKey(invitation.tutor_id, studentId), relation);
+
+    // Mark invitation as used
+    invitationMap.set(invitation.id, { ...invitation, status: 'used', edited_at: new Date().toISOString() });
+
+    return { ...relation };
+  },
+};
+
 // ── FAQ ──
 const faqMap = new Map<string, FAQ>();
 mockData.faqData.forEach((f) => faqMap.set(f.id, { ...f }));
@@ -680,6 +728,7 @@ export const mockApi: ApiClient = {
   ...authApi,
   ...usersApi,
   ...tutorStudentsApi,
+  ...invitationsApi,
   ...slotsApi,
   ...lessonsApi,
   ...homeworkApi,
