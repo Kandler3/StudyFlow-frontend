@@ -25,7 +25,7 @@ const statusBadgeVariants: Record<Invitation['status'], 'success' | 'warning' | 
 };
 
 function buildInviteLink(token: string): string {
-  return `${TG_BOT_LINK}?start=invite_${token}`;
+  return `${TG_BOT_LINK}?startapp=invite_${token}`;
 }
 
 export function StudentInvite() {
